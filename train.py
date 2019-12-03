@@ -286,7 +286,7 @@ total_epochs = len(record_df_train)
 r_epochs = len(record_df_train)
 
 epoch_length = len(train_imgs)
-num_epochs = 100
+num_epochs = 20
 iter_num = 0
 
 total_epochs += num_epochs
@@ -309,7 +309,6 @@ start_time = time.time()
 
 st_epoch = time.time()
 for epoch_num in range(num_epochs):
-
     print("time/epoch:{}".format(st_epoch-time.time()))
     st_epoch = time.time()
 
@@ -318,10 +317,8 @@ for epoch_num in range(num_epochs):
     
     r_epochs += 1
     st_step = time.time()
-
     while True:
         try:
-
             if len(rpn_accuracy_rpn_monitor_train) == epoch_length and C.verbose:
                 mean_overlapping_bboxes_train = float(sum(rpn_accuracy_rpn_monitor_train))/len(rpn_accuracy_rpn_monitor_train)
                 rpn_accuracy_rpn_monitor_train = []
@@ -331,16 +328,13 @@ for epoch_num in range(num_epochs):
 
             # Generate X (x_img) and label Y ([y_rpn_cls, y_rpn_regr])
             X_train, Y_train, img_data_train, debug_img_train, debug_num_pos_train = next(data_gen_train)
-            print(X_train.shape)
-            quit()
 
             # Train rpn model and get loss value [_, loss_rpn_cls, loss_rpn_regr]
             loss_rpn_train = model_rpn.train_on_batch(X_train, Y_train)
-
             # Get predicted rpn from rpn model [rpn_cls, rpn_regr]
             P_rpn_train = model_rpn.predict_on_batch(X_train)
 
-            # R: bboxes (shape=(300,4))
+            # R: bboxes (shape=(30for i in range(3):
             # Convert rpn layer to roi bboxes
             R_train = rpn_to_roi(P_rpn_train[0], P_rpn_train[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)
            
@@ -365,13 +359,13 @@ for epoch_num in range(num_epochs):
             else:
                 neg_samples_train = []
 
-            if len(pos_samples) > 0:
+            if len(pos_samples_train) > 0:
                 pos_samples_train = pos_samples_train[0]
             else:
                 pos_samples_train = []
 
-            rpn_accuracy_rpn_monitor_train.append(len(pos_samples))
-            rpn_accuracy_for_epoch_train.append((len(pos_samples)))
+            rpn_accuracy_rpn_monitor_train.append(len(pos_samples_train))
+            rpn_accuracy_for_epoch_train.append((len(pos_samples_train)))
 
             if C.num_rois > 1:
                 # If number of positive anchors is larger than 4//2 = 2, randomly choose 2 pos samples
@@ -416,7 +410,6 @@ for epoch_num in range(num_epochs):
 
             progbar_train.update(iter_num, [('rpn_cls', np.mean(losses_train[:iter_num, 0])), ('rpn_regr', np.mean(losses_train[:iter_num, 1])),
                                       ('final_cls', np.mean(losses_train[:iter_num, 2])), ('final_regr', np.mean(losses_train[:iter_num, 3]))])
-
             if iter_num == epoch_length:
                 loss_rpn_cls_train = np.mean(losses_train[:, 0])
                 loss_rpn_regr_train = np.mean(losses_train[:, 1])
@@ -438,23 +431,23 @@ for epoch_num in range(num_epochs):
                     print('Elapsed time: {}'.format(time.time() - start_time))
                     elapsed_time = (time.time()-start_time)/60
 
-                curr_loss = loss_rpn_cls_train + loss_rpn_regr_train + loss_class_cls_train + loss_class_regr_train
+                curr_loss_train = loss_rpn_cls_train + loss_rpn_regr_train + loss_class_cls_train + loss_class_regr_train
                 iter_num = 0
                 start_time = time.time()
 
-                if curr_loss < best_loss:
+                if curr_loss_train < best_loss_train:
                     if C.verbose:
                         print('Total loss decreased from {} to {}, saving weights'.format(best_loss_train,curr_loss_train))
                     best_loss_train = curr_loss_train
-                    model_all.save_weights(C.model_path)
-                    with open("checkpoint/checkpoint.csv", "w") as csv_file:
-                        csv_file.write("epoch:{}, best_loss:{} \n".format(len(record_df_train),best_loss_train))
+                    #model_all.save_weights(C.model_path)
+                    # with open("checkpoint/checkpoint.csv", "w") as csv_file:
+                    #     csv_file.write("epoch:{}, best_loss:{} \n".format(len(record_df_train),best_loss_train))
 
                 # Save weight from the current model 
-                checkpoint_path = "../checkpoint/model_frcnn_vgg_epoch"+ str(len(record_df_train))+".hdf5"
-                model_all.save_weights(checkpoint_path)
+                # checkpoint_path = "../checkpoint/model_frcnn_vgg_epoch"+ str(len(record_df_train))+".hdf5"
+                # model_all.save_weights(checkpoint_path)
 
-                new_row = {'mean_overlapping_bboxes_train':round(mean_overlapping_bboxes_train, 3), 
+                new_row = {'mean_overlapping_bboxes':round(mean_overlapping_bboxes_train, 3), 
                            'class_acc':round(class_acc_train, 3), 
                            'loss_rpn_cls':round(loss_rpn_cls_train, 3), 
                            'loss_rpn_regr':round(loss_rpn_regr_train, 3), 
@@ -469,7 +462,7 @@ for epoch_num in range(num_epochs):
 
                 # Test on test set
                 for i in range (len(test_imgs)):
-                    progbar_test = generic_utils.Progbar(len(test_imgs))
+                    print("test image {}/{} processed".format(i+1,len(test_imgs)))
                     # Generate X (x_img) and label Y ([y_rpn_cls, y_rpn_regr])
                     X_test, Y_test, img_data_test, debug_img_test, debug_num_pos_test = next(data_gen_test)
                     # Train rpn model and get loss value [_, loss_rpn_cls, loss_rpn_regr]
@@ -486,7 +479,7 @@ for epoch_num in range(num_epochs):
                     X2_test, Y1_test, Y2_test, IouS_test = calc_iou(R_test, img_data_test, C, class_mapping)
 
                     # If X2 is None means there are no matching bboxes
-                    if X2 is None:
+                    if X2_test is None:
                         rpn_accuracy_rpn_monitor_test.append(0)
                         rpn_accuracy_for_epoch_test.append(0)
                         continue
@@ -495,7 +488,7 @@ for epoch_num in range(num_epochs):
                     neg_samples_test = np.where(Y1_test[0, :, -1] == 1)
                     pos_samples_test = np.where(Y1_test[0, :, -1] == 0)
 
-                    if len(neg_samples) > 0:
+                    if len(neg_samples_test) > 0:
                         neg_samples_test = neg_samples_test[0]
                     else:
                         neg_samples_test = []
@@ -539,7 +532,6 @@ for epoch_num in range(num_epochs):
                     losses_test[i, 3] = loss_class_test[2]
                     losses_test[i, 4] = loss_class_test[3]
 
-                    progbar_test.update(i,"images test")
 
                     if i == (len(test_imgs)-1):
                         loss_rpn_cls_test = np.mean(losses_test[:, 0])
@@ -553,80 +545,27 @@ for epoch_num in range(num_epochs):
                     
                         curr_loss_test = loss_rpn_cls_test + loss_rpn_regr_test + loss_class_cls_test + loss_class_regr_test
 
-                    new_row_test = {'mean_overlapping_bboxes_train':round(mean_overlapping_bboxes_test, 3), 
-                        'class_acc':round(class_acc_test, 3), 
-                        'loss_rpn_cls':round(loss_rpn_cls_test, 3), 
-                        'loss_rpn_regr':round(loss_rpn_regr_test, 3), 
-                        'loss_class_cls':round(loss_class_cls_test, 3), 
-                        'loss_class_regr':round(loss_class_regr_test, 3), 
-                        'curr_loss':round(curr_loss_test, 3), 
-                        'elapsed_time':round(elapsed_time, 3), 
-                        'mAP': 0}
+                        new_row_test = {'mean_overlapping_bboxes':round(mean_overlapping_bboxes_test, 3), 
+                            'class_acc':round(class_acc_test, 3), 
+                            'loss_rpn_cls':round(loss_rpn_cls_test, 3), 
+                            'loss_rpn_regr':round(loss_rpn_regr_test, 3), 
+                            'loss_class_cls':round(loss_class_cls_test, 3), 
+                            'loss_class_regr':round(loss_class_regr_test, 3), 
+                            'curr_loss':round(curr_loss_test, 3), 
+                            'elapsed_time':round(elapsed_time, 3), 
+                            'mAP': 0}
                     
-                    record_df_test = record_df_test.append(new_row_test, ignore_index=True)
-                    record_df_test.to_csv(record_path_test, index=0)
+                        record_df_test = record_df_test.append(new_row_test, ignore_index=True)
+                        record_df_test.to_csv(record_path_test, index=0)
 
-
+                print("  time/step:{}".format(time.time()-st_step))
+                st_step = time.time()
                 break
-            print("  time/step:{}".format(time.time()-st_step))
-            st_step = time.time()
             
         except Exception as e:
             print('Exception: {}'.format(e))
             continue
 
 print('Training complete, exiting.')
-############################################################
-                            #Show
-############################################################
 
-plt.figure(figsize=(15,5))
-plt.subplot(1,2,1)
-plt.plot(np.arange(0, r_epochs), record_df_train['mean_overlapping_bboxes_train'], 'r')
-plt.title('mean_overlapping_bboxes_train')
-plt.subplot(1,2,2)
-plt.plot(np.arange(0, r_epochs), record_df_train['class_acc'], 'r')
-plt.title('class_acc')
-
-plt.show()
-
-plt.figure(figsize=(15,5))
-plt.subplot(1,2,1)
-plt.plot(np.arange(0, r_epochs), record_df_train['loss_rpn_cls'], 'r')
-plt.title('loss_rpn_cls')
-plt.subplot(1,2,2)
-plt.plot(np.arange(0, r_epochs), record_df_train['loss_rpn_regr'], 'r')
-plt.title('loss_rpn_regr')
-plt.show()
-
-
-plt.figure(figsize=(15,5))
-plt.subplot(1,2,1)
-plt.plot(np.arange(0, r_epochs), record_df_train['loss_class_cls'], 'r')
-plt.title('loss_class_cls')
-plt.subplot(1,2,2)
-plt.plot(np.arange(0, r_epochs), record_df_train['loss_class_regr'], 'r')
-plt.title('loss_class_regr')
-plt.show()
-
-plt.plot(np.arange(0, r_epochs), record_df_train['curr_loss'], 'r')
-plt.title('total_loss')
-plt.show()
-
-plt.figure(figsize=(15,5))
-plt.subplot(1,2,1)
-plt.plot(np.arange(0, r_epochs), record_df_train['curr_loss'], 'r')
-plt.title('total_loss')
-plt.subplot(1,2,2)
-plt.plot(np.arange(0, r_epochs), record_df_train['elapsed_time'], 'r')
-plt.title('elapsed_time')
-plt.show()
-
-plt.title('loss')
-plt.plot(np.arange(0, r_epochs), record_df_train['loss_rpn_cls'], 'b')
-plt.plot(np.arange(0, r_epochs), record_df_train['loss_rpn_regr'], 'g')
-plt.plot(np.arange(0, r_epochs), record_df_train['loss_class_cls'], 'r')
-plt.plot(np.arange(0, r_epochs), record_df_train['loss_class_regr'], 'c')
-# plt.plot(np.arange(0, r_epochs), record_df_train['curr_loss'], 'm')
-plt.show()
 
