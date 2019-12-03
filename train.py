@@ -286,7 +286,7 @@ total_epochs = len(record_df_train)
 r_epochs = len(record_df_train)
 
 epoch_length = len(train_imgs)
-num_epochs = 20
+num_epochs = 100
 iter_num = 0
 
 total_epochs += num_epochs
@@ -439,7 +439,7 @@ for epoch_num in range(num_epochs):
                     if C.verbose:
                         print('Total loss decreased from {} to {}, saving weights'.format(best_loss_train,curr_loss_train))
                     best_loss_train = curr_loss_train
-                    #model_all.save_weights(C.model_path)
+                    model_all.save_weights(C.model_path)
                     # with open("checkpoint/checkpoint.csv", "w") as csv_file:
                     #     csv_file.write("epoch:{}, best_loss:{} \n".format(len(record_df_train),best_loss_train))
 
