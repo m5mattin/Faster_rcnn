@@ -18,14 +18,14 @@ axs[2].set_title('Total loss',color='black')
 
 ### RPN
 axs[0].plot(    np.arange(0, r_epochs), 
-                record_train['mean_overlapping_bboxes'],
+                record_train['mean_overlapping_bboxes']/100,
                 label='train set: mean_overlapping_bboxes',
-                color=colors['darkgreen'])
+                color=colors['darkblue'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_train['loss_rpn_cls'],
                 label='train set: loss_rpn_cls',
-                color=colors['forestgreen'])
+                color=colors['darkgreen'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_train['loss_rpn_regr'],
@@ -33,14 +33,14 @@ axs[0].plot(    np.arange(0, r_epochs),
                 color=colors['limegreen'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
-                record_test['mean_overlapping_bboxes'],
+                record_test['mean_overlapping_bboxes']/100,
                 label='test set: mean_overlapping_bboxes',
-                color=colors['darkorange'])
+                color=colors['darkred'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_test['loss_rpn_cls'],
                 label='test set: loss_rpn_cls',
-                color=colors['gold'])
+                color=colors['darkorange'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_test['loss_rpn_regr'],
@@ -52,12 +52,12 @@ axs[0].plot(    np.arange(0, r_epochs),
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_train['class_acc'],
                 label='train set: class_acc',
-                color=colors['darkgreen'])
+                color=colors['darkblue'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_train['loss_class_cls'],
                 label='train set: loss_class_cls',
-                color=colors['forestgreen'])
+                color=colors['darkgreen'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_train['loss_class_regr'],
@@ -67,12 +67,12 @@ axs[1].plot(    np.arange(0, r_epochs),
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_test['class_acc'],
                 label='test set: class_acc',
-                color=colors['darkorange'])
+                color=colors['darkred'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_test['loss_class_cls'],
                 label='test set: loss_class_cls',
-                color=colors['gold'])
+                color=colors['darkorange'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_test['loss_class_regr'],
