@@ -13,13 +13,13 @@ r_epochs = len(record_train)
 fig, axs = plt.subplots(1, 3)
 
 axs[0].set_title('rpn',color='black')
-axs[1].set_title('Classification',color='black')
+axs[1].set_title('Classification Pig',color='black')
 axs[2].set_title('Total loss',color='black')
 
 ### RPN
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_train['mean_overlapping_bboxes']/100,
-                label='train set: mean_overlapping_bboxes',
+                label='train set: mean_overlapping_bboxes/100',
                 color=colors['darkblue'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
@@ -34,7 +34,7 @@ axs[0].plot(    np.arange(0, r_epochs),
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_test['mean_overlapping_bboxes']/100,
-                label='test set: mean_overlapping_bboxes',
+                label='test set: mean_overlapping_bboxes/100',
                 color=colors['darkred'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
@@ -50,9 +50,14 @@ axs[0].plot(    np.arange(0, r_epochs),
 
 # Classification
 axs[1].plot(    np.arange(0, r_epochs), 
-                record_train['class_acc'],
-                label='train set: class_acc',
+                record_train['class_pig_acc'],
+                label='train set: class_pig_acc',
                 color=colors['darkblue'])
+
+axs[1].plot(    np.arange(0, r_epochs), 
+                record_train['class_others_acc'],
+                label='train set: class_others_acc',
+                color=colors['black'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_train['loss_class_cls'],
@@ -65,9 +70,14 @@ axs[1].plot(    np.arange(0, r_epochs),
                 color=colors['limegreen'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
-                record_test['class_acc'],
-                label='test set: class_acc',
+                record_test['class_pig_acc'],
+                label='test set: class_pig_acc'',
                 color=colors['darkred'])
+
+axs[1].plot(    np.arange(0, r_epochs), 
+                record_test['class_others_acc'],
+                label='test set: class_others_acc'',
+                color=colors['darkgray'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_test['loss_class_cls'],
@@ -80,6 +90,7 @@ axs[1].plot(    np.arange(0, r_epochs),
                 color=colors['yellow'])
 
 
+# TOTAL 
 axs[2].plot(    np.arange(0, r_epochs), 
                 record_train['curr_loss'],
                 label='train set: curr_loss',

@@ -467,9 +467,6 @@ for epoch_num in range(num_epochs):
                            'elapsed_time':round(elapsed_time, 3), 
                            'mAP': 0}
 
-                record_df_train = record_df_train.append(new_row, ignore_index=True)
-                record_df_train.to_csv(record_path_train, index=0)
-
                 # Test on test set
                 for i in range (len(test_imgs)):
                     print("test image {}/{} processed".format(i+1,len(test_imgs)))
@@ -567,6 +564,9 @@ for epoch_num in range(num_epochs):
                             'curr_loss':round(curr_loss_test, 3), 
                             'elapsed_time':round(elapsed_time, 3), 
                             'mAP': 0}
+
+                        record_df_train = record_df_train.append(new_row, ignore_index=True)
+                        record_df_train.to_csv(record_path_train, index=0)
                     
                         record_df_test = record_df_test.append(new_row_test, ignore_index=True)
                         record_df_test.to_csv(record_path_test, index=0)
