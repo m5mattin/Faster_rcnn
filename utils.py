@@ -817,7 +817,7 @@ lambda_cls_class = 1.0
 
 epsilon = 1e-4
 
-def rpn_loss_regr(num_anchors):
+def rpn_loss_regr(num_anchors): 
     """Loss function for rpn regression
     Args:
         num_anchors: number of anchors (9 in here)
@@ -827,7 +827,6 @@ def rpn_loss_regr(num_anchors):
                            x_abx - 0.5 (otherwise)
     """
     def rpn_loss_regr_fixed_num(y_true, y_pred):
-
         # x is the difference between true value and predicted vaue
         x = y_true[:, :, :, 4 * num_anchors:] - y_pred
 
@@ -852,9 +851,7 @@ def rpn_loss_cls(num_anchors):
         lambda * sum((binary_crossentropy(isValid*y_pred,y_true))) / N
     """
     def rpn_loss_cls_fixed_num(y_true, y_pred):
-
             return lambda_rpn_class * K.sum(y_true[:, :, :, :num_anchors] * K.binary_crossentropy(y_pred[:, :, :, :], y_true[:, :, :, num_anchors:])) / K.sum(epsilon + y_true[:, :, :, :num_anchors])
-
     return rpn_loss_cls_fixed_num
 
 def class_loss_regr(num_classes):

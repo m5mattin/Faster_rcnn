@@ -188,7 +188,7 @@ print('Num train samples (images) : {}'.format(len(train_imgs)))
 print('Training sub-images per class : {}'.format(classes_count_train))
 print("class_mapping : {}".format(class_mapping))
 
-# Save the configuration
+#Save the configuration
 with open(config_output_filename, 'wb') as config_f:
     pickle.dump(C,config_f)
     print('Config has been written to {}, and can be loaded when testing to ensure correct results'.format(config_output_filename))
@@ -227,7 +227,8 @@ model_all = Model([img_input, roi_input], rpn[:2] + classifier)
 
 # Because the google colab can only run the session several hours one time (then you need to connect again), 
 # we need to save the model and load the model to continue training
-if not os.path.isfile(C.model_path):
+if True:
+# if not os.path.isfile(C.model_path):
     #If this is the begin of the training, load the pre-traind base network such as vgg-16
     try:
         print('This is the first time of your training')
@@ -239,8 +240,8 @@ if not os.path.isfile(C.model_path):
             https://github.com/fchollet/keras/tree/master/keras/applications')
     
     # Create the record.csv file to record losses, acc and mAP
-    record_df_train = pd.DataFrame(columns=['mean_overlapping_bboxes', 'class_acc', 'loss_rpn_cls', 'loss_rpn_regr', 'loss_class_cls', 'loss_class_regr', 'curr_loss', 'elapsed_time', 'mAP'])
-    record_df_test = pd.DataFrame(columns=['mean_overlapping_bboxes', 'class_acc', 'loss_rpn_cls', 'loss_rpn_regr', 'loss_class_cls', 'loss_class_regr', 'curr_loss', 'elapsed_time', 'mAP'])
+    record_df_train = pd.DataFrame(columns=['mean_overlapping_bboxes', 'class_pig_acc', 'class_others_acc', 'loss_rpn_cls', 'loss_rpn_regr', 'loss_class_cls', 'loss_class_regr', 'curr_loss', 'elapsed_time', 'mAP'])
+    record_df_test = pd.DataFrame(columns=['mean_overlapping_bboxes', 'class_pig_acc', 'class_others_acc', 'loss_rpn_cls', 'loss_rpn_regr', 'loss_class_cls', 'loss_class_regr', 'curr_loss', 'elapsed_time', 'mAP'])
 else:
     # If this is a continued training, load the trained model from before
     print('Continue training based on previous trained model')
@@ -252,7 +253,8 @@ else:
     record_df_train = pd.read_csv(record_path_train)
 
     r_mean_overlapping_bboxes_train = record_df_train['mean_overlapping_bboxes']
-    r_class_accs_train = record_df_train['class_acc']
+    r_class_pig_accs_train = record_df_train['class_pig_acc']
+    r_class_others_accs_train = record_df_train['class_others_acc']
     r_loss_rpn_clss_train = record_df_train['loss_rpn_cls']
     r_loss_rpn_regrs_train = record_df_train['loss_rpn_regr']
     r_loss_class_clss_train = record_df_train['loss_class_cls']
@@ -263,22 +265,24 @@ else:
 
     record_df_test = pd.read_csv(record_path_test)
 
-    r_mean_overlapping_bboxes_train = record_df_test['mean_overlapping_bboxes']
-    r_class_acc = record_df_test['class_acc']
-    r_loss_rpn_cls = record_df_test['loss_rpn_cls']
-    r_loss_rpn_regr = record_df_test['loss_rpn_regr']
-    r_loss_class_cls = record_df_test['loss_class_cls']
-    r_loss_class_regr = record_df_test['loss_class_regr']
-    r_curr_loss = record_df_test['curr_loss']
-    r_elapsed_time = record_df_test['elapsed_time']
-    r_mAP = record_df_test['mAP']
+    r_mean_overlapping_bboxes_test = record_df_test['mean_overlapping_bboxes']
+    r_class_pig_accs_test = record_df_test['class_pig_acc']
+    r_class_others_accs_test = record_df_test['class_others_acc']
+    r_loss_rpn_clss_test = record_df_test['loss_rpn_cls']
+    r_loss_rpn_regrs_test = record_df_test['loss_rpn_regr']
+    r_loss_class_clss_test = record_df_test['loss_class_cls']
+    r_loss_class_regrs_test = record_df_test['loss_class_regr']
+    r_curr_losss_test = record_df_test['curr_loss']
+    r_elapsed_times_test = record_df_test['elapsed_time']
+    r_mAPs_test = record_df_test['mAP']
 
-    print('Already train %dK batches'% (len(record_df_train)))
+    print('Already train %dK batches'% (len(record_df_test)))
 
 optimizer = Adam(lr=1e-5)
 optimizer_classifier = Adam(lr=1e-5)
 model_rpn.compile(optimizer=optimizer, loss=[rpn_loss_cls(num_anchors), rpn_loss_regr(num_anchors)])
-model_classifier.compile(optimizer=optimizer_classifier, loss=[class_loss_cls, class_loss_regr(len(classes_count_train)-1)], metrics={'dense_class_{}'.format(len(classes_count_train)): 'accuracy'})
+
+model_classifier.compile(optimizer=optimizer_classifier, loss=[class_loss_cls, class_loss_regr(len(classes_count_train)-1)], metrics=['categorical_accuracy'])
 model_all.compile(optimizer='sgd', loss='mae')
 
 # Training setting
@@ -291,8 +295,8 @@ iter_num = 0
 
 total_epochs += num_epochs
 
-losses_train = np.zeros((epoch_length, 5))
-losses_test = np.zeros((epoch_length, 5))
+losses_train = np.zeros((epoch_length, 6))
+losses_test = np.zeros((epoch_length, 6))
 
 rpn_accuracy_rpn_monitor_train = []
 rpn_accuracy_for_epoch_train = []
@@ -397,14 +401,17 @@ for epoch_num in range(num_epochs):
             #  X2[:, sel_samples, :] => num_rois (4 in here) bboxes which contains selected neg and pos
             #  Y1[:, sel_samples, :] => one hot encode for num_rois bboxes which contains selected neg and pos
             #  Y2[:, sel_samples, :] => labels and gt bboxes for num_rois bboxes which contains selected neg and pos
-            loss_class_train = model_classifier.train_on_batch([X_train, X2_train[:, sel_samples_train, :]], [Y1_train[:, sel_samples_train, :], Y2_train[:, sel_samples_train, :]])
 
+            loss_class_train = model_classifier.train_on_batch([X_train, X2_train[:, sel_samples_train, :]], [Y1_train[:, sel_samples_train, :], Y2_train[:, sel_samples_train, :]])
+            
             losses_train[iter_num, 0] = loss_rpn_train[1]
             losses_train[iter_num, 1] = loss_rpn_train[2]
 
             losses_train[iter_num, 2] = loss_class_train[1]
             losses_train[iter_num, 3] = loss_class_train[2]
             losses_train[iter_num, 4] = loss_class_train[3]
+            losses_train[iter_num, 5] = loss_class_train[4]
+
 
             iter_num += 1
 
@@ -415,14 +422,16 @@ for epoch_num in range(num_epochs):
                 loss_rpn_regr_train = np.mean(losses_train[:, 1])
                 loss_class_cls_train = np.mean(losses_train[:, 2])
                 loss_class_regr_train = np.mean(losses_train[:, 3])
-                class_acc_train = np.mean(losses_train[:, 4])
+                class_pig_acc_train = np.mean(losses_train[:, 4])
+                class_others_acc_train = np.mean(losses_train[:, 5])
 
                 mean_overlapping_bboxes_train = float(sum(rpn_accuracy_for_epoch_train)) / len(rpn_accuracy_for_epoch_train)
                 rpn_accuracy_for_epoch_train = []
 
                 if C.verbose:
                     print('Mean number of bounding boxes from RPN overlapping ground truth boxes: {}'.format(mean_overlapping_bboxes_train))
-                    print('Classifier accuracy for bounding boxes from RPN: {}'.format(class_acc_train))
+                    print('Classifier accuracy for pigs for bounding boxes from RPN: {}'.format(class_pig_acc_train))
+                    print('Classifier accuracy for others for bounding boxes from RPN: {}'.format(class_others_acc_train))
                     print('Loss RPN classifier: {}'.format(loss_rpn_cls_train))
                     print('Loss RPN regression: {}'.format(loss_rpn_regr_train))
                     print('Loss Detector classifier: {}'.format(loss_class_cls_train))
@@ -448,7 +457,8 @@ for epoch_num in range(num_epochs):
                 # model_all.save_weights(checkpoint_path)
 
                 new_row = {'mean_overlapping_bboxes':round(mean_overlapping_bboxes_train, 3), 
-                           'class_acc':round(class_acc_train, 3), 
+                           'class_pig_acc':round(class_pig_acc_train, 3), 
+                           'class_others_acc':round(class_others_acc_train, 3), 
                            'loss_rpn_cls':round(loss_rpn_cls_train, 3), 
                            'loss_rpn_regr':round(loss_rpn_regr_train, 3), 
                            'loss_class_cls':round(loss_class_cls_train, 3), 
@@ -531,6 +541,7 @@ for epoch_num in range(num_epochs):
                     losses_test[i, 2] = loss_class_test[1]
                     losses_test[i, 3] = loss_class_test[2]
                     losses_test[i, 4] = loss_class_test[3]
+                    losses_test[i, 5] = loss_class_test[4]
 
 
                     if i == (len(test_imgs)-1):
@@ -538,7 +549,8 @@ for epoch_num in range(num_epochs):
                         loss_rpn_regr_test = np.mean(losses_test[:, 1])
                         loss_class_cls_test = np.mean(losses_test[:, 2])
                         loss_class_regr_test = np.mean(losses_test[:, 3])
-                        class_acc_test = np.mean(losses_test[:, 4])
+                        class_pig_acc_test = np.mean(losses_test[:, 4])
+                        class_others_acc_test = np.mean(losses_test[:, 5])
 
                         mean_overlapping_bboxes_test = float(sum(rpn_accuracy_for_epoch_test)) / len(rpn_accuracy_for_epoch_test)
                         rpn_accuracy_for_epoch_test = []
@@ -546,7 +558,8 @@ for epoch_num in range(num_epochs):
                         curr_loss_test = loss_rpn_cls_test + loss_rpn_regr_test + loss_class_cls_test + loss_class_regr_test
 
                         new_row_test = {'mean_overlapping_bboxes':round(mean_overlapping_bboxes_test, 3), 
-                            'class_acc':round(class_acc_test, 3), 
+                            'class_pig_acc':round(class_pig_acc_test, 3),
+                            'class_others_acc':round(class_others_acc_test, 3),  
                             'loss_rpn_cls':round(loss_rpn_cls_test, 3), 
                             'loss_rpn_regr':round(loss_rpn_regr_test, 3), 
                             'loss_class_cls':round(loss_class_cls_test, 3), 
