@@ -71,7 +71,7 @@ axs[1].plot(    np.arange(0, r_epochs),
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_test['class_pig_acc'],
-                label='test set: class_pig_acc'',
+                label='test set: class_pig_acc',
                 color=colors['darkred'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
