@@ -13,7 +13,7 @@ r_epochs = len(record_train)
 fig, axs = plt.subplots(1, 3)
 
 axs[0].set_title('rpn',color='black')
-axs[1].set_title('Classification Pig',color='black')
+axs[1].set_title('Classification',color='black')
 axs[2].set_title('Total loss',color='black')
 
 ### RPN
