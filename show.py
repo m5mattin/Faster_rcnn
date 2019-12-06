@@ -102,6 +102,6 @@ axs[2].plot(    np.arange(0, r_epochs),
                 color=colors['darkorange'])
 
 for i in range(3):
-    axs[i].legend(loc="lower left")
+    axs[i].legend(loc="best")
 
 plt.show()
