@@ -451,6 +451,26 @@ def iou(a, b):
 
 	return float(area_i) / float(area_u + 1e-6)
 
+def iiou(a,b):
+    curr_iou = iou(a,b)
+    curr_intersection = intersection(a,b)
+    curr_union = union(a,b,curr_intersection)
+    print("union : ",curr_union)
+    x1 = min(a[0], b[0])
+    y1 = min(a[1], b[1])
+    x2 = max(a[2], b[2])
+    y2 = max(a[3], b[3])
+
+    min_area = abs((x2-x1)*(y2-y1))
+    print("min_area : ",min_area)
+    iiou = curr_iou - ((min_area - curr_union)/min_area)
+
+    return iiou
+
+
+
+
+
 ############################################################
             #Calculate the the rpn for all images
 ############################################################
