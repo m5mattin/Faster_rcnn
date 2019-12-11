@@ -291,7 +291,7 @@ print(len(classes_count_train))
 print(classes_count_train)
 print(len(classes_count_test))
 print(classes_count_test)
-quit()
+
 model_classifier.compile(optimizer=optimizer_classifier, loss=[class_loss_cls, class_loss_regr(len(classes_count_train)-1)], metrics=['categorical_accuracy'])
 model_all.compile(optimizer='sgd', loss='mae')
 
