@@ -182,10 +182,16 @@ if 'bg' not in classes_count_train:
     classes_count_train['bg'] = 0
     class_mapping['bg'] = len(class_mapping)
 
+if 'bg' not in classes_count_test:
+    classes_count_test['bg'] = 0
+    class_mapping['bg'] = len(class_mapping)
+
 C.class_mapping = class_mapping
 
 print('Num train samples (images) : {}'.format(len(train_imgs)))
+print('Num test samples (images) : {}'.format(len(test_imgs)))
 print('Training sub-images per class : {}'.format(classes_count_train))
+print('Test sub-images per class : {}'.format(classes_count_test))
 print("class_mapping : {}".format(class_mapping))
 
 #Save the configuration
@@ -281,7 +287,11 @@ else:
 optimizer = Adam(lr=1e-5)
 optimizer_classifier = Adam(lr=1e-5)
 model_rpn.compile(optimizer=optimizer, loss=[rpn_loss_cls(num_anchors), rpn_loss_regr(num_anchors)])
-
+print(len(classes_count_train))
+print(classes_count_train)
+print(len(classes_count_test))
+print(classes_count_test)
+quit()
 model_classifier.compile(optimizer=optimizer_classifier, loss=[class_loss_cls, class_loss_regr(len(classes_count_train)-1)], metrics=['categorical_accuracy'])
 model_all.compile(optimizer='sgd', loss='mae')
 
