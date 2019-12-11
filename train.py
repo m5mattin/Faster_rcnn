@@ -184,7 +184,6 @@ if 'bg' not in classes_count_train:
 
 if 'bg' not in classes_count_test:
     classes_count_test['bg'] = 0
-    class_mapping['bg'] = len(class_mapping)
 
 C.class_mapping = class_mapping
 
@@ -322,6 +321,7 @@ else:
 start_time = time.time()
 
 st_epoch = time.time()
+
 for epoch_num in range(num_epochs):
     print("time/epoch:{}".format(st_epoch-time.time()))
     st_epoch = time.time()
@@ -331,6 +331,7 @@ for epoch_num in range(num_epochs):
     
     r_epochs += 1
     st_step = time.time()
+                
     while True:
         try:
             if len(rpn_accuracy_rpn_monitor_train) == epoch_length and C.verbose:
@@ -339,7 +340,7 @@ for epoch_num in range(num_epochs):
 #                 print('Average number of overlapping bounding boxes from RPN = {} for {} previous iterations'.format(mean_overlapping_bboxes_train, epoch_length))
                 if mean_overlapping_bboxes_train == 0:
                     print('RPN is not producing bounding boxes that overlap the ground truth boxes. Check RPN settings or keep training.')
-
+            
             # Generate X (x_img) and label Y ([y_rpn_cls, y_rpn_regr])
             X_train, Y_train, img_data_train, debug_img_train, debug_num_pos_train = next(data_gen_train)
 
@@ -347,17 +348,16 @@ for epoch_num in range(num_epochs):
             loss_rpn_train = model_rpn.train_on_batch(X_train, Y_train)
             # Get predicted rpn from rpn model [rpn_cls, rpn_regr]
             P_rpn_train = model_rpn.predict_on_batch(X_train)
-
+            
             # R: bboxes (shape=(30for i in range(3):
             # Convert rpn layer to roi bboxes
             R_train = rpn_to_roi(P_rpn_train[0], P_rpn_train[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)
-           
+            
             # note: calc_iou converts from (x1,y1,x2,y2) to (x,y,w,h) format
             # X2: bboxes that iou > C.classifier_min_overlap for all gt bboxes in 300 non_max_suppression bboxes
             # Y1: one hot code for bboxes from above => x_roi (X)
             # Y2: corresponding labels and corresponding gt bboxes
             X2_train, Y1_train, Y2_train, IouS_train = calc_iou(R_train, img_data_train, C, class_mapping)
-
             # If X2 is None means there are no matching bboxes
             if X2_train is None:
                 rpn_accuracy_rpn_monitor_train.append(0)
