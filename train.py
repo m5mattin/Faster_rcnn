@@ -479,7 +479,7 @@ for epoch_num in range(num_epochs):
                 mean_overlapping_bboxes_train = float(sum(rpn_accuracy_for_epoch_train)) / len(rpn_accuracy_for_epoch_train)
                 rpn_accuracy_for_epoch_train = []
                 mean_overlapping_bboxes_pig_train = float(sum(rpn_accuracy_pig_for_epoch_train)) / len(rpn_accuracy_pig_for_epoch_train)
-                mean_overlapping_bboxes_pig_train = []
+                rpn_accuracy_pig_for_epoch_train = []
                 mean_overlapping_bboxes_neg_train = float(sum(rpn_accuracy_neg_for_epoch_train)) / len(rpn_accuracy_neg_for_epoch_train)
                 rpn_accuracy_neg_for_epoch_train = []
 
