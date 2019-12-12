@@ -1238,6 +1238,25 @@ def rpn_to_roi(rpn_layer, regr_layer, C, dim_ordering, use_regr=True, max_boxes=
                     #Test all epochs
 ############################################################
 
+def get_pig_accuracy_from_confusion_matrix(m,classes_count):
+    tp = m[0,0]
+    fp = 0
+    for i in range (1,len(classes_count)):
+        fp = fp + m[0,i]
+
+    fn = 0
+    for i in range (1,len(classes_count)):
+        fn = fn + m[i,0]
+
+    tn = 0
+    for i in range (1,len(classes_count)):
+        for j in range (1,len(classes_count)):
+            tn = tn + m[i,j]
+    
+    acc = (tp + tn) / (tp + fn + fp + tn)
+    return int(tp), int(fp), int(fn), int(tn), acc
+
+
 ### RPN
 def compare_rpn_to_groundtruth(detection_boxes, groundtruth_boxes, max_boxes, iou_threshold):
     # Compare rpn result to groundtruth label

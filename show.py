@@ -70,12 +70,12 @@ axs[1].plot(    np.arange(0, r_epochs),
                 color=colors['limegreen'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
-                record_test['class_pig_acc'],
+                record_test['class_pig_acc']*1281/497,
                 label='test set: class_pig_acc',
                 color=colors['darkred'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
-                record_test['class_others_acc'],
+                record_test['class_others_acc']*1281/497,
                 label='test set: class_others_acc',
                 color=colors['darkgray'])
 
