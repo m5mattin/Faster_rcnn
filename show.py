@@ -18,8 +18,8 @@ axs[2].set_title('Total loss',color='black')
 
 ### RPN
 axs[0].plot(    np.arange(0, r_epochs), 
-                record_train['mean_overlapping_bboxes']/100,
-                label='train set: mean_overlapping_bboxes/100',
+                record_train['mean_overlapping_bboxes_pig']/100,
+                label='train set: mean_overlapping_bboxes_pig/100',
                 color=colors['darkblue'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
@@ -33,18 +33,18 @@ axs[0].plot(    np.arange(0, r_epochs),
                 color=colors['limegreen'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
-                record_test['mean_overlapping_bboxes']/100,
-                label='test set: mean_overlapping_bboxes/100',
+                record_test['mean_overlapping_bboxes_pig']/100,
+                label='val set: mean_overlapping_bboxes_pigs/100',
                 color=colors['darkred'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_test['loss_rpn_cls'],
-                label='test set: loss_rpn_cls',
+                label='val set: loss_rpn_cls',
                 color=colors['darkorange'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_test['loss_rpn_regr'],
-                label='test set: loss_rpn_regr',
+                label='val set: loss_rpn_regr',
                 color=colors['yellow'])
 
 
@@ -71,22 +71,22 @@ axs[1].plot(    np.arange(0, r_epochs),
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_test['class_pig_acc']*1281/497,
-                label='test set: class_pig_acc',
+                label='val set: class_pig_acc',
                 color=colors['darkred'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_test['class_others_acc']*1281/497,
-                label='test set: class_others_acc',
+                label='val set: class_others_acc',
                 color=colors['darkgray'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_test['loss_class_cls'],
-                label='test set: loss_class_cls',
+                label='val set: loss_class_cls',
                 color=colors['darkorange'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_test['loss_class_regr'],
-                label='test set: loss_class_regr',
+                label='val set: loss_class_regr',
                 color=colors['yellow'])
 
 
@@ -98,7 +98,7 @@ axs[2].plot(    np.arange(0, r_epochs),
 
 axs[2].plot(    np.arange(0, r_epochs), 
                 record_test['curr_loss'],
-                label='train set: curr_loss',
+                label='val set: curr_loss',
                 color=colors['darkorange'])
 
 for i in range(3):
