@@ -33,87 +33,92 @@ tp_rpn_train = record_train['rpn_00']
 fn_rpn_train = record_train['rpn_10']
 recall_rpn_train = tp_rpn_train / (tp_rpn_train + fn_rpn_train)
 
+# recall
 axs[0].plot(    np.arange(0, r_epochs), 
-                recall_rpn,
-                label='train set: call',
+                recall_rpn_train,
+                label='train set: recall',
+                color=colors['darkorange'])
+
+axs[0].plot(    np.arange(0, r_epochs), 
+                recall_rpn_test,
+                label='eval set: recall',
                 color=colors['darkred'])
+# mean overlap
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_train['mean_overlapping_bboxes_pig']/100,
                 label='train set: mean_overlapping_bboxes_pig/100',
-                color=colors['darkred'])
+                color=colors['indigo'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_train['mean_overlapping_bboxes_pig']/100,
                 label='train set: mean_overlapping_bboxes_pig/100',
-                color=colors['darkred'])
-
-axs[0].plot(    np.arange(0, r_epochs), 
-                record_train['mean_overlapping_bboxes_others']/100,
-                label='train set: mean_overlapping_bboxes_others/100',
-                color=colors['maroon'])
-
-axs[0].plot(    np.arange(0, r_epochs), 
-                record_train['loss_rpn_cls'],
-                label='train set: loss_rpn_cls',
-                color=colors['firebrick'])
-
-axs[0].plot(    np.arange(0, r_epochs), 
-                record_train['loss_rpn_regr'],
-                label='train set: loss_rpn_regr',
-                color=colors['brown'])
+                color=colors['purple'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_test['mean_overlapping_bboxes_pig']/100,
                 label='eval set: mean_overlapping_bboxes_pig/100',
-                color=colors['darkblue'])
+                color=colors['black'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_test['mean_overlapping_bboxes_others']/100,
                 label='eval set: mean_overlapping_bboxes_others/100',
-                color=colors['mediumblue'])
+                color=colors['dimgray'])
+
+
+# Loss
+
+axs[0].plot(    np.arange(0, r_epochs), 
+                record_train['loss_rpn_cls'],
+                label='train set: loss_rpn_cls',
+                color=colors['darkblue'])
+
+axs[0].plot(    np.arange(0, r_epochs), 
+                record_train['loss_rpn_regr'],
+                label='train set: loss_rpn_regr',
+                color=colors['royalblue'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_test['loss_rpn_cls'],
                 label='eval set: loss_rpn_cls',
-                color=colors['blue'])
+                color=colors['darkgreen'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_test['loss_rpn_regr'],
                 label='eval set: loss_rpn_regr',
-                color=colors['slateblue'])
+                color=colors['lime'])
 
-# Classification
+# # Classification
 
-axs[1].plot(    np.arange(0, r_epochs), 
-                record_train['loss_class_cls'],
-                label='train set: loss_class_cls',
-                color=colors['darkgreen'])
+# axs[1].plot(    np.arange(0, r_epochs), 
+#                 record_train['loss_class_cls'],
+#                 label='train set: loss_class_cls',
+#                 color=colors['darkgreen'])
 
-axs[1].plot(    np.arange(0, r_epochs), 
-                record_train['loss_class_regr'],
-                label='train set: loss_class_regr',
-                color=colors['limegreen'])
+# axs[1].plot(    np.arange(0, r_epochs), 
+#                 record_train['loss_class_regr'],
+#                 label='train set: loss_class_regr',
+#                 color=colors['limegreen'])
 
-axs[1].plot(    np.arange(0, r_epochs), 
-                record_test['class_pig_acc']*1281/497,
-                label='val set: class_pig_acc',
-                color=colors['darkred'])
+# axs[1].plot(    np.arange(0, r_epochs), 
+#                 record_test['class_pig_acc']*1281/497,
+#                 label='val set: class_pig_acc',
+#                 color=colors['darkred'])
 
-axs[1].plot(    np.arange(0, r_epochs), 
-                record_test['class_others_acc']*1281/497,
-                label='val set: class_others_acc',
-                color=colors['darkgray'])
+# axs[1].plot(    np.arange(0, r_epochs), 
+#                 record_test['class_others_acc']*1281/497,
+#                 label='val set: class_others_acc',
+#                 color=colors['darkgray'])
 
-axs[1].plot(    np.arange(0, r_epochs), 
-                record_test['loss_class_cls'],
-                label='val set: loss_class_cls',
-                color=colors['darkorange'])
+# axs[1].plot(    np.arange(0, r_epochs), 
+#                 record_test['loss_class_cls'],
+#                 label='val set: loss_class_cls',
+#                 color=colors['darkorange'])
 
-axs[1].plot(    np.arange(0, r_epochs), 
-                record_test['loss_class_regr'],
-                label='val set: loss_class_regr',
-                color=colors['yellow'])
+# axs[1].plot(    np.arange(0, r_epochs), 
+#                 record_test['loss_class_regr'],
+#                 label='val set: loss_class_regr',
+#                 color=colors['yellow'])
 
 
 # # TOTAL 
