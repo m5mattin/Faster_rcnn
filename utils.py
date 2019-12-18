@@ -1256,30 +1256,164 @@ def get_pig_accuracy_from_confusion_matrix(m,classes_count):
     acc = (tp + tn) / (tp + fn + fp + tn)
     return int(tp), int(fp), int(fn), int(tn), acc
 
-
 ### RPN
-def compare_rpn_to_groundtruth(detection_boxes, groundtruth_boxes, max_boxes, iou_threshold):
-    # Compare rpn result to groundtruth label
-    iou_threshold = iou_threshold/100
-    tp = 0
-    fp = 0
-    fn = 0
-    len_groundtruth_boxes_pigs = 0 
+
+def compare_rpn_to_groundtruth(groundtruth_boxes, detection_boxes, num_boxes=300):
+    confusion_matrix = np.zeros((2,3))
+
+    for i in range(len(groundtruth_boxes)):
+        detected = False
+        groundtruth_boxe = [    groundtruth_boxes[i]['x1'],
+                                groundtruth_boxes[i]['y1'],
+                                groundtruth_boxes[i]['x2'],
+                                groundtruth_boxes[i]['y2']]
+        groundtruth_classe = groundtruth_boxes[i]['class'] 
+        for j in range(len(detection_boxes)):
+            curr_iou = iou(groundtruth_boxe,detection_boxes[j])
+            if curr_iou > 0.5:
+                detected = True
+                break
+        if detected == True:
+            if groundtruth_classe == 'pig':
+                confusion_matrix[0,0] = confusion_matrix[0,0] + 1
+            if groundtruth_classe == 'others':
+                confusion_matrix[0,1] = confusion_matrix[0,1] + 1
+        else:
+            if groundtruth_classe == 'pig':
+                confusion_matrix[1,0] = confusion_matrix[1,0] + 1
+            if groundtruth_classe == 'others':
+                confusion_matrix[1,1] = confusion_matrix[1,1] + 1
+    
+    confusion_matrix[0,2] = num_boxes - confusion_matrix[0,0] - confusion_matrix[0,1] - confusion_matrix[1,0] - confusion_matrix[1,1]
+    return confusion_matrix  
+
+def compare_detection_to_groundtruth(groundtruth_boxes, detection_boxes, iou_min=0.5, score_min=0):
+    confusion_matrix = np.zeros((3,3))
+    
+    if (len(detection_boxes))>0:
+        detection_boxes = np.asarray(detection_boxes)
+        detection_boxes = detection_boxes[detection_boxes[:,2]>score_min]
+        detection_boxes = np.ndarray.tolist(detection_boxes)
+    else :
+        detection_boxes = []
+    print(len(detection_boxes))
+
+    match = []
+
     for idx in range(len(groundtruth_boxes)):
-        if groundtruth_boxes[idx]['class']=='pig':
-            len_groundtruth_boxes_pigs = len_groundtruth_boxes_pigs + 1
-            groundtruth_boxe = [    groundtruth_boxes[idx]['x1'],
-                                    groundtruth_boxes[idx]['y1'],
-                                    groundtruth_boxes[idx]['x2'],
-                                    groundtruth_boxes[idx]['y2']]
-            for j in range(max_boxes):
-                curr_iou = iou(groundtruth_boxe,detection_boxes[j])
-                if curr_iou > iou_threshold:
-                    tp = tp + 1
-                    break
-    fp = max_boxes - tp
-    fn = len_groundtruth_boxes_pigs - tp
-    return tp, fp, fn
+        groundtruth_boxe = [    groundtruth_boxes[idx]['x1'],
+                                groundtruth_boxes[idx]['y1'],
+                                groundtruth_boxes[idx]['x2'],
+                                groundtruth_boxes[idx]['y2']]
+        
+        if groundtruth_boxes[idx]['class'] == 'pig':
+            groundtruth_classe = 0
+        if groundtruth_boxes[idx]['class'] == 'others':
+            groundtruth_classe = 1
+        if groundtruth_boxes[idx]['class'] == 'bg':
+            groundtruth_classe = 2
+        # Each detection boxe
+        for j in range(len(detection_boxes)):
+            detection_boxe = detection_boxes[j][0]
+            detection_classe = detection_boxes[j][1]
+            curr_iou = iou(groundtruth_boxe,detection_boxe)
+            if curr_iou > iou_min :
+                match.append((  groundtruth_classe,
+                                idx,
+                                detection_classe,
+                                j,
+                                curr_iou))
+    #Remove duplicate detection for groundtruth
+    lt = len(match)
+    cpt = 0
+    while cpt < lt - 1:
+        cpt2 = cpt + 1
+        while cpt2 < lt:
+            if match[cpt][0:2] == match[cpt2][0:2]:
+                if match[cpt][4] > match[cpt2][4]:
+                    del match[cpt2]
+                else:
+                    del match[cpt]
+                lt = lt - 1
+            else: 
+                cpt2 = cpt2 + 1
+        cpt = cpt + 1
+    
+    # Remove duplicate groundtruth for detection
+    lt = len(match)
+    cpt = 0
+    while cpt < lt - 1:
+        cpt2 = cpt + 1
+        while cpt2 < lt:
+            if match[cpt][2:4] == match[cpt2][2:4]:
+                if match[cpt][4] > match[cpt2][4]:
+                    del match[cpt2]
+                else:
+                    del match[cpt]
+                lt = lt - 1
+            else: 
+                cpt2 = cpt2 + 1
+        cpt = cpt + 1
+        
+    #Record good and missclassification    
+    for i in range(len(match)):
+        confusion_matrix[match[i][2],match[i][0]] = confusion_matrix[match[i][2],match[i][0]] + 1
+
+    # Record false negative
+    # Each groundtruth boxe
+    for idx in range(len(groundtruth_boxes)):
+        if groundtruth_boxes[idx]['class'] == 'pig':
+            groundtruth_classe = 0
+        if groundtruth_boxes[idx]['class'] == 'others':
+            groundtruth_classe = 1
+        if groundtruth_boxes[idx]['class'] == 'bg':
+            groundtruth_classe = 2
+        found_detection = False
+        for j in range(len(match)):
+            if idx == match[j][1]:
+                found_detection = True
+        if found_detection == False:
+            confusion_matrix[2, groundtruth_classe] = confusion_matrix[2, groundtruth_classe] + 1
+           
+    # Each groundtruth boxe
+    for i in range(len(detection_boxes)):
+        found_detection = False
+        #Each match
+        for j in range(len(match)):
+            if i == match[j][3]:
+                found_detection = True
+        if found_detection == False:
+            confusion_matrix[detection_boxes[i][1],2] = confusion_matrix[detection_boxes[i][1],2] + 1
+    return confusion_matrix
+
+
+def get_detections_boxes(Y, C, class_mapping):
+    bboxes = []
+    # class_mapping = {v: k for k, v in class_mapping.items()}
+    for i in range(len(Y)):
+        (x, y, w, h) = Y[i][0]
+        x1 = C.rpn_stride*x
+        y1 = C.rpn_stride*y
+        x2 = C.rpn_stride*(x+w)
+        y2 = C.rpn_stride*(y+h)
+        cls_name =  np.argmax(Y[i][1])
+        try: 
+            (tx, ty, tw, th) = Y[i][2]
+            tx /= C.classifier_regr_std[0]
+            ty /= C.classifier_regr_std[1]
+            tw /= C.classifier_regr_std[2]
+            th /= C.classifier_regr_std[3]
+            x, y, w, h = apply_regr(x, y, w, h, tx, ty, tw, th)
+            x1 = C.rpn_stride*x
+            y1 = C.rpn_stride*y
+            x2 = C.rpn_stride*(x+w)
+            y2 = C.rpn_stride*(y+h)
+        except:
+            pass
+        bboxes.append( ( [x1,y1,x2,y2], cls_name, Y[i][1][np.argmax(Y[i][1])] ) )
+    #print(bboxes)
+    return bboxes
+
 
 def show_rpn_on_image(img,g_boxes,d_boxes,num_boxes):
     img_copy = img.copy()
@@ -1371,10 +1505,10 @@ def compare_classification_to_groundtruth(class_mapping, class_boxes, groundtrut
     tn = 0
     for i in range(len(groundtruth_boxes)):
         groundtruth_classe = "bg"
-        # Si la box a été classifié pig avec un iou minimum la classe réelle  est "pig" 
+        # Si la box a ete classifie pig avec un iou minimum la classe reelle  est "pig" 
         if groundtruth_boxes[i][0] == "pig" and groundtruth_boxes[i][1] >= iou_min:
             groundtruth_classe = "pig"
-        # Si la box a été classifié "pig" avec un score min 
+        # Si la box a ete classifie "pig" avec un score min 
         if np.max(class_boxes[i]) >= score_min and class_mapping[np.argmax(class_boxes[i])] == "pig":
             if groundtruth_classe == "pig":
                 tp = tp + 1
@@ -1390,106 +1524,108 @@ def compare_classification_to_groundtruth(class_mapping, class_boxes, groundtrut
 
 ### DETECTION
 
-def compare_detection_to_groundtruth(detection_boxes,detection_scores,groundtruth_boxes,score_min,iou_min):
 
-    iou_min = iou_min / 100
-    score_min = score_min / 100
-    #Errase detection boxes with small score
-    if len(detection_boxes)>0:
-        detection_boxes = np.asarray(detection_boxes)
-        detection_scores = np.asarray(detection_scores)
+ 
+# def compare_detection_to_groundtruth(detection_boxes,detection_scores,groundtruth_boxes,score_min,iou_min):
 
-        detection_boxes = detection_boxes[detection_scores>score_min]
-        detection_scores = detection_scores[detection_scores>score_min]
+#     iou_min = iou_min / 100
+#     score_min = score_min / 100
+#     #Errase detection boxes with small score
+#     if len(detection_boxes)>0:
+#         detection_boxes = np.asarray(detection_boxes)
+#         detection_scores = np.asarray(detection_scores)
 
-        detection_boxes = np.ndarray.tolist(detection_boxes)
-        detection_scores = np.ndarray.tolist(detection_scores)
-    else :
-        detection_boxes = []
-        detection_scores =[]
+#         detection_boxes = detection_boxes[detection_scores>score_min]
+#         detection_scores = detection_scores[detection_scores>score_min]
+
+#         detection_boxes = np.ndarray.tolist(detection_boxes)
+#         detection_scores = np.ndarray.tolist(detection_scores)
+#     else :
+#         detection_boxes = []
+#         detection_scores =[]
     
-    detection_classe = "pig"
-    match = []
-    mat = np.zeros(shape=(3,3))
-    confusion_matrix = pd.DataFrame(mat,
-                                        index = ['pig', 'others', 'neg'], 
-                                        columns = ['pig', 'others', 'neg'])
+#     detection_classe = "pig"
+#     match = []
+#     mat = np.zeros(shape=(3,3))
+#     confusion_matrix = pd.DataFrame(mat,
+#                                         index = ['pig', 'others', 'neg'], 
+#                                         columns = ['pig', 'others', 'neg'])
     
-    # Each groundtruth boxe
-    for idx in range(len(groundtruth_boxes)):
-        groundtruth_boxe = [    groundtruth_boxes[idx]['x1'],
-                                groundtruth_boxes[idx]['y1'],
-                                groundtruth_boxes[idx]['x2'],
-                                groundtruth_boxes[idx]['y2']]
-        # Each detection boxe
-        for j in range(len(detection_boxes)):
-            curr_iou = iou(groundtruth_boxe,detection_boxes[j])
-            if curr_iou > iou_min :
-                match.append((  groundtruth_boxes[idx]['class'],
-                                idx,
-                                detection_classe,
-                                j,
-                                curr_iou))
+#     # Each groundtruth boxe
+#     for idx in range(len(groundtruth_boxes)):
+#         groundtruth_boxe = [    groundtruth_boxes[idx]['x1'],
+#                                 groundtruth_boxes[idx]['y1'],
+#                                 groundtruth_boxes[idx]['x2'],
+#                                 groundtruth_boxes[idx]['y2']]
+#         # Each detection boxe
+#         for j in range(len(detection_boxes)):
+#             curr_iou = iou(groundtruth_boxe,detection_boxes[j])
+#             if curr_iou > iou_min :
+#                 match.append((  groundtruth_boxes[idx]['class'],
+#                                 idx,
+#                                 detection_classe,
+#                                 j,
+#                                 curr_iou))
     
-    # Remove duplicate detection for groundtruth
-    lt = len(match)
-    cpt = 0
-    while cpt < lt - 1:
-        cpt2 = cpt + 1
-        while cpt2 < lt:
-            if match[cpt][0:2] == match[cpt2][0:2]:
-                if match[cpt][4] > match[cpt2][4]:
-                    del match[cpt2]
-                else:
-                    del match[cpt]
-                lt = lt - 1
-            else: 
-                cpt2 = cpt2 + 1
-        cpt = cpt + 1
+#     # Remove duplicate detection for groundtruth
+#     lt = len(match)
+#     cpt = 0
+#     while cpt < lt - 1:
+#         cpt2 = cpt + 1
+#         while cpt2 < lt:
+#             if match[cpt][0:2] == match[cpt2][0:2]:
+#                 if match[cpt][4] > match[cpt2][4]:
+#                     del match[cpt2]
+#                 else:
+#                     del match[cpt]
+#                 lt = lt - 1
+#             else: 
+#                 cpt2 = cpt2 + 1
+#         cpt = cpt + 1
     
-    # Remove duplicate groundtruth for detection
-    lt = len(match)
-    cpt = 0
-    while cpt < lt - 1:
-        cpt2 = cpt + 1
-        while cpt2 < lt:
-            if match[cpt][2:4] == match[cpt2][2:4]:
-                if match[cpt][4] > match[cpt2][4]:
-                    del match[cpt2]
-                else:
-                    del match[cpt]
-                lt = lt - 1
-            else: 
-                cpt2 = cpt2 + 1
-        cpt = cpt + 1
+#     # Remove duplicate groundtruth for detection
+#     lt = len(match)
+#     cpt = 0
+#     while cpt < lt - 1:
+#         cpt2 = cpt + 1
+#         while cpt2 < lt:
+#             if match[cpt][2:4] == match[cpt2][2:4]:
+#                 if match[cpt][4] > match[cpt2][4]:
+#                     del match[cpt2]
+#                 else:
+#                     del match[cpt]
+#                 lt = lt - 1
+#             else: 
+#                 cpt2 = cpt2 + 1
+#         cpt = cpt + 1
 
-    # Record good and missclassification
-    for i in range(len(match)):
-        confusion_matrix.loc[match[i][2],match[i][0]] = confusion_matrix.loc[match[i][2],match[i][0]] + 1
+#     # Record good and missclassification
+#     for i in range(len(match)):
+#         confusion_matrix.loc[match[i][2],match[i][0]] = confusion_matrix.loc[match[i][2],match[i][0]] + 1
 
-    # Record false negative
-    # Each groundtruth boxe
-    for i in range(len(groundtruth_boxes)):
-        found_detection = False
-        #Each match
-        for j in range(len(match)):
-            if (groundtruth_boxes[i]['class'] == match[j][0]) and i == match[j][1]:
-                found_detection = True
-        if found_detection == False:
-            confusion_matrix.loc["neg",groundtruth_boxes[i]['class']] = confusion_matrix.loc["neg",groundtruth_boxes[i]['class']] + 1
+#     # Record false negative
+#     # Each groundtruth boxe
+#     for i in range(len(groundtruth_boxes)):
+#         found_detection = False
+#         #Each match
+#         for j in range(len(match)):
+#             if (groundtruth_boxes[i]['class'] == match[j][0]) and i == match[j][1]:
+#                 found_detection = True
+#         if found_detection == False:
+#             confusion_matrix.loc["neg",groundtruth_boxes[i]['class']] = confusion_matrix.loc["neg",groundtruth_boxes[i]['class']] + 1
            
-    # Each groundtruth boxe
-    for i in range(len(detection_boxes)):
-        found_detection = False
-        #Each match
-        for j in range(len(match)):
-            if (detection_classe == match[j][2]) and i == match[j][3]:
-                found_detection = True
-        if found_detection == False:
-            confusion_matrix.loc[detection_classe,"neg"] = confusion_matrix.loc[detection_classe,"neg"] + 1
+#     # Each groundtruth boxe
+#     for i in range(len(detection_boxes)):
+#         found_detection = False
+#         #Each match
+#         for j in range(len(match)):
+#             if (detection_classe == match[j][2]) and i == match[j][3]:
+#                 found_detection = True
+#         if found_detection == False:
+#             confusion_matrix.loc[detection_classe,"neg"] = confusion_matrix.loc[detection_classe,"neg"] + 1
 
-    tp_pig = confusion_matrix.loc["pig","pig"]
-    fp_pig = confusion_matrix.loc["pig","others"] + confusion_matrix.loc["pig","neg"]
-    fn_pig = confusion_matrix.loc["others","pig"] + confusion_matrix.loc["neg","pig"]
+#     tp_pig = confusion_matrix.loc["pig","pig"]
+#     fp_pig = confusion_matrix.loc["pig","others"] + confusion_matrix.loc["pig","neg"]
+#     fn_pig = confusion_matrix.loc["others","pig"] + confusion_matrix.loc["neg","pig"]
 
-    return int(tp_pig), int(fp_pig), int(fn_pig)
+#     return int(tp_pig), int(fp_pig), int(fn_pig)
