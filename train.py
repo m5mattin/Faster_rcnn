@@ -390,8 +390,6 @@ for epoch_num in range(num_epochs):
             # get confusion matrix for rpn boxes 
             tmp_confusion = compare_rpn_to_groundtruth(img_data_label['bboxes'],R_train*C.rpn_stride,num_boxes=300)
             rpn_confusion_matrix_train = rpn_confusion_matrix_train + tmp_confusion
-            print('\n overlapping_bboxes : ',overlapping_bboxes)
-            print('rpn : \n ',rpn_confusion_matrix_train)
 
             # If X2 is None means there are no matching bboxes
             if X2_train is None:
@@ -499,8 +497,6 @@ for epoch_num in range(num_epochs):
 
             #detection_confusion_matrix = compare_detection_to_groundtruth(img_data_label['bboxes'], all_dets)
 
-
-            print('\n classification : \n ',class_confusion_matrix_train)
               
             # Loss rpn  
             losses_train[iter_num, 0] = loss_rpn_train[1]
@@ -617,8 +613,6 @@ for epoch_num in range(num_epochs):
                     
                     tmp_confusion = compare_rpn_to_groundtruth(img_data_test['bboxes'],R_test*C.rpn_stride,num_boxes=300)
                     rpn_confusion_matrix_test = rpn_confusion_matrix_test + tmp_confusion
-                    print('\n overlapping_bboxes_test : ',overlapping_bboxes)
-                    print('rpn_test : \n ',rpn_confusion_matrix_test)
                     
                     # If X2 is None means there are no matching bboxes
                     if X2_test is None:
@@ -644,7 +638,7 @@ for epoch_num in range(num_epochs):
                             class_gt = np.where(Y1_test[:, sel_samples_test, :][0][i] == np.amax(Y1_test[:, sel_samples_test, :][0][i]))
                             class_gt = int(class_gt[0])
                             class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
-                    print('\n classification : \n ',class_confusion_matrix_test)
+
                     # Loss rpn  
                     losses_test[iter_num, 0] = loss_rpn_test[1]
                     losses_test[iter_num, 1] = loss_rpn_test[2]
