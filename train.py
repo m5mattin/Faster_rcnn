@@ -258,11 +258,11 @@ if True:
             https://github.com/fchollet/keras/tree/master/keras/applications')
     
     # Create the record.csv file to record losses, acc and mAP
-    record_df_train = pd.DataFrame(columns=['mean_overlapping_bboxes_pig','mean_overlapping_bboxes_neg' , 'class_pig_acc', 'class_others_acc', 'loss_rpn_cls', 'loss_rpn_regr', 'loss_class_cls', 'loss_class_regr', 'curr_loss', 'elapsed_time', 'mAP'])
-    record_df_test = pd.DataFrame(columns=['mean_overlapping_bboxes_pig','mean_overlapping_bboxes_neg' , 'class_pig_acc', 'class_others_acc', 'loss_rpn_cls', 'loss_rpn_regr', 'loss_class_cls', 'loss_class_regr', 'curr_loss', 'elapsed_time', 'mAP'])
-    
+
     record_df_train = pd.DataFrame(columns=[    'loss_rpn_cls', 'loss_rpn_regr', 
-                                                'mean_overlapping_bboxes_pig', 'mean_overlapping_bboxes_others', 'mean_overlapping_bboxes_neg'
+                                                'mean_overlapping_bboxes_pig', 
+                                                'mean_overlapping_bboxes_others', 
+                                                'mean_overlapping_bboxes_neg',
                                                 'rpn_00', 'rpn_01' , 'rpn_02',
                                                 'rpn_10', 'rpn_11' , 'rpn_12',
                                                 'loss_class_cls', 'loss_class_regr',
@@ -271,8 +271,10 @@ if True:
                                                 'class_20', 'class_21', 'class_22'
                                                 'curr_loss'])
 
-    record_df_train = pd.DataFrame(columns=[    'loss_rpn_cls', 'loss_rpn_regr', 
-                                                'mean_overlapping_bboxes_pig', 'mean_overlapping_bboxes_others', 'mean_overlapping_bboxes_neg'
+    record_df_test = pd.DataFrame(columns=[    'loss_rpn_cls', 'loss_rpn_regr', 
+                                                'mean_overlapping_bboxes_pig', 
+                                                'mean_overlapping_bboxes_others', 
+                                                'mean_overlapping_bboxes_neg',
                                                 'rpn_00', 'rpn_01' , 'rpn_02',
                                                 'rpn_10', 'rpn_11' , 'rpn_12',
                                                 'loss_class_cls', 'loss_class_regr',
@@ -360,6 +362,8 @@ for epoch_num in range(num_epochs):
 
             # Train rpn model and get loss value [_, loss_rpn_cls, loss_rpn_regr]
             loss_rpn_train = model_rpn.train_on_batch(X_train, Y_train)
+            print(Y_train.shape)
+            quit()
             # Get predicted rpn from rpn model [rpn_cls, rpn_regr]
             P_rpn_train = model_rpn.predict_on_batch(X_train)
             
@@ -465,7 +469,7 @@ for epoch_num in range(num_epochs):
                     others_samples.remove(x)
                 
                 # select rest with backgroung
-                selected_bg_samples = np.random.choice(bg_samples, C.num_rois - len(selected_pig_samples) - len(selected_others_samples), replace=True).tolist()
+                selected_bg_samples = np.random.choice(bg_samples, C.num_rois - len(selected_pig_samples) - len(selected_others_samples), replace=False).tolist()
                 sel_samples_train = selected_pig_samples + selected_others_samples + selected_bg_samples
             
             # training_data: [X, X2[:, sel_samples, :]]
@@ -563,30 +567,30 @@ for epoch_num in range(num_epochs):
                 # checkpoint_path = "../checkpoint/model_frcnn_vgg_epoch"+ str(len(record_df_train))+".hdf5"
                 # model_all.save_weights(checkpoint_path)
                 
-                new_row = {'mean_overlapping_bboxes_pig':round(overlapping_pigs_rpn, 3), 
-                           'mean_overlapping_bboxes_others':round(overlapping_others_rpn, 3),
-                           'mean_overlapping_bboxes_neg':round(overlapping_bg_rpn, 3),
-                           'loss_rpn_cls':round(loss_rpn_cls_train, 3), 
-                           'loss_rpn_regr':round(loss_rpn_regr_train, 3), 
-                           'loss_class_cls':round(loss_class_cls_train, 3), 
-                           'loss_class_regr':round(loss_class_regr_train, 3), 
-                           'curr_loss':round(curr_loss_train, 3),
-                           'rpn_00':round(rpn_confusion_matrix_train[0,0], 3),
-                           'rpn_01':round(rpn_confusion_matrix_train[0,1], 3) ,
-                           'rpn_02':round(rpn_confusion_matrix_train[0,2], 3),
-                           'rpn_10':round(rpn_confusion_matrix_train[1,0], 3),
-                           'rpn_11':round(rpn_confusion_matrix_train[1,1], 3) ,
-                           'rpn_12':round(rpn_confusion_matrix_train[1,2], 3),      
-                           'class_00':round(class_confusion_matrix_train[0,0], 3),
-                           'class_01':round(class_confusion_matrix_train[0,1], 3) ,
-                           'class_02':round(class_confusion_matrix_train[0,2], 3),
-                           'class_10':round(class_confusion_matrix_train[1,0], 3),
-                           'class_11':round(class_confusion_matrix_train[1,1], 3) ,
-                           'class_12':round(class_confusion_matrix_train[1,2], 3),
-                           'class_20':round(class_confusion_matrix_train[2,0], 3),
-                           'class_21':round(class_confusion_matrix_train[2,1], 3) ,
-                           'class_22':round(class_confusion_matrix_train[2,2], 3),
-                            }
+                new_row_train = {'mean_overlapping_bboxes_pig':round(overlapping_pigs_rpn, 3), 
+                                'mean_overlapping_bboxes_others':round(overlapping_others_rpn, 3),
+                                'mean_overlapping_bboxes_neg':round(overlapping_bg_rpn, 3),
+                                'loss_rpn_cls':round(loss_rpn_cls_train, 3), 
+                                'loss_rpn_regr':round(loss_rpn_regr_train, 3), 
+                                'loss_class_cls':round(loss_class_cls_train, 3), 
+                                'loss_class_regr':round(loss_class_regr_train, 3), 
+                                'curr_loss':round(curr_loss_train, 3),
+                                'rpn_00':round(rpn_confusion_matrix_train[0,0], 3),
+                                'rpn_01':round(rpn_confusion_matrix_train[0,1], 3) ,
+                                'rpn_02':round(rpn_confusion_matrix_train[0,2], 3),
+                                'rpn_10':round(rpn_confusion_matrix_train[1,0], 3),
+                                'rpn_11':round(rpn_confusion_matrix_train[1,1], 3) ,
+                                'rpn_12':round(rpn_confusion_matrix_train[1,2], 3),      
+                                'class_00':round(class_confusion_matrix_train[0,0], 3),
+                                'class_01':round(class_confusion_matrix_train[0,1], 3) ,
+                                'class_02':round(class_confusion_matrix_train[0,2], 3),
+                                'class_10':round(class_confusion_matrix_train[1,0], 3),
+                                'class_11':round(class_confusion_matrix_train[1,1], 3) ,
+                                'class_12':round(class_confusion_matrix_train[1,2], 3),
+                                'class_20':round(class_confusion_matrix_train[2,0], 3),
+                                'class_21':round(class_confusion_matrix_train[2,1], 3) ,
+                                'class_22':round(class_confusion_matrix_train[2,2], 3),
+                                    }
 
                 overlapping_bboxes = np.zeros(len(class_mapping_test))
                 for num_image in range (len(test_imgs)):
@@ -665,7 +669,7 @@ for epoch_num in range(num_epochs):
 
                         curr_loss_test = loss_rpn_cls_test + loss_rpn_regr_test + loss_class_cls_test + loss_class_regr_test
 
-                        new_row = { 'mean_overlapping_bboxes_pig':round(overlapping_pigs_rpn, 3), 
+                        new_row_test = { 'mean_overlapping_bboxes_pig':round(overlapping_pigs_rpn, 3), 
                                     'mean_overlapping_bboxes_others':round(overlapping_others_rpn, 3),
                                     'mean_overlapping_bboxes_neg':round(overlapping_bg_rpn, 3),
                                     'loss_rpn_cls':round(loss_rpn_cls_test, 3), 
@@ -690,10 +694,10 @@ for epoch_num in range(num_epochs):
                                     'class_22':round(class_confusion_matrix_test[2,2], 3),
                                     }
 
-                        record_df_train = record_df_train.append(new_row, ignore_index=True)
+                        record_df_train = record_df_train.append(new_row_train, ignore_index=True)
                         record_df_train.to_csv(record_path_train, index=0)
                     
-                        record_df_test = record_df_test.append(new_row, ignore_index=True)
+                        record_df_test = record_df_test.append(new_row_test, ignore_index=True)
                         record_df_test.to_csv(record_path_test, index=0)
 
                 print("  time/step:{}".format(time.time()-st_step))
