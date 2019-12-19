@@ -362,8 +362,6 @@ for epoch_num in range(num_epochs):
 
             # Train rpn model and get loss value [_, loss_rpn_cls, loss_rpn_regr]
             loss_rpn_train = model_rpn.train_on_batch(X_train, Y_train)
-            print(Y_train.shape)
-            quit()
             # Get predicted rpn from rpn model [rpn_cls, rpn_regr]
             P_rpn_train = model_rpn.predict_on_batch(X_train)
             
@@ -447,56 +445,57 @@ for epoch_num in range(num_epochs):
             Y_detection = []
 
             # train on number of num rois while there is positive 
+            print("mo")
             for i in range( int((len(pig_samples)) // ((C.num_rois/2))+1 )):
-                selected_pig_samples = []
-                selected_others_samples = []
-                selected_bg_samples = []
+                if i == 0 or (len(pig_samples) >= (C.num_rois/4)):
+                    selected_pig_samples = []
+                    selected_others_samples = []
+                    selected_bg_samples = []
 
-                # select half with pigs 
-                if len(pig_samples) > C.num_rois/2:
-                    selected_pig_samples = np.random.choice(pig_samples, int(C.num_rois/2), replace=False).tolist()
-                else:
-                    selected_pig_samples = pig_samples.copy()
-                for x in (selected_pig_samples):
-                    pig_samples.remove(x)
-
-                # select quarter with others
-                if len(others_samples) > C.num_rois/4:
-                    selected_others_samples = np.random.choice(others_samples, int((C.num_rois - len(selected_pig_samples))/2), replace=False).tolist()
-                else:
-                    selected_others_samples = others_samples.copy()
-                for x in (selected_others_samples):
-                    others_samples.remove(x)
+                    # select half with pigs 
+                    if len(pig_samples) > C.num_rois/2:
+                        selected_pig_samples = np.random.choice(pig_samples, int(C.num_rois/2), replace=False).tolist()
+                    else:
+                        selected_pig_samples = pig_samples.copy()
+                    for x in (selected_pig_samples):
+                        pig_samples.remove(x)
+                    # select quarter with others
+                    if len(others_samples) > C.num_rois/4:
+                        selected_others_samples = np.random.choice(others_samples, int((C.num_rois - len(selected_pig_samples))/2), replace=False).tolist()
+                    else:
+                        selected_others_samples = others_samples.copy()
+                    for x in (selected_others_samples):
+                        others_samples.remove(x)
+                    # select rest with backgroung
+                    selected_bg_samples = np.random.choice(bg_samples, C.num_rois - len(selected_pig_samples) - len(selected_others_samples), replace=False).tolist()
+                    sel_samples_train = selected_pig_samples + selected_others_samples + selected_bg_samples
                 
-                # select rest with backgroung
-                selected_bg_samples = np.random.choice(bg_samples, C.num_rois - len(selected_pig_samples) - len(selected_others_samples), replace=False).tolist()
-                sel_samples_train = selected_pig_samples + selected_others_samples + selected_bg_samples
-            
-            # training_data: [X, X2[:, sel_samples, :]]
-            # labels: [Y1[:, sel_samples, :], Y2[:, sel_samples, :]]
-            #  X                     => img_data resized image
-            #  X2[:, sel_samples, :] => num_rois (4 in here) bboxes which contains selected neg and pos
-            #  Y1[:, sel_samples, :] => one hot encode for num_rois bboxes which contains selected neg and pos
-            #  Y2[:, sel_samples, :] => labels and gt bboxes for num_rois bboxes which contains selected neg and pos
+                # training_data: [X, X2[:, sel_samples, :]]
+                # labels: [Y1[:, sel_samples, :], Y2[:, sel_samples, :]]
+                #  X                     => img_data resized image
+                #  X2[:, sel_samples, :] => num_rois (4 in here) bboxes which contains selected neg and pos
+                #  Y1[:, sel_samples, :] => one hot encode for num_rois bboxes which contains selected neg and pos
+                #  Y2[:, sel_samples, :] => labels and gt bboxes for num_rois bboxes which contains selected neg and pos
 
-                loss = model_classifier.train_on_batch([X_train, X2_train[:, sel_samples_train, :]], [Y1_train[:, sel_samples_train, :], Y2_train[:, sel_samples_train, :]])
-                loss_class_train.append(loss)
-                [P_cls, P_regr] = model_classifier.predict([X_train, X2_train[:, sel_samples_train, :]])
-                
-                for i in range (Y1_label[:, sel_samples_train, :].shape[1]):
-                    class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
-                    class_predicted = int(class_predicted[0])
-                    class_gt = np.where(Y1_label[:, sel_samples_train, :][0][i] == np.amax(Y1_label[:, sel_samples_train, :][0][i]))
-                    class_gt = int(class_gt[0])
-                    # Adjust format class mapping (pig,bg) to (pig,others,bg)
-                    if len(class_mapping) != len(class_mapping_label):
-                        if class_predicted == len(class_mapping) - 1:
-                            class_predicted = class_predicted + 1
-                            
-                    class_confusion_matrix_train[class_predicted, class_gt] = class_confusion_matrix_train[class_predicted, class_gt] + 1
+                    loss = model_classifier.train_on_batch([X_train, X2_train[:, sel_samples_train, :]], [Y1_train[:, sel_samples_train, :], Y2_train[:, sel_samples_train, :]])
+                    loss_class_train.append(loss)
+                    [P_cls, P_regr] = model_classifier.predict([X_train, X2_train[:, sel_samples_train, :]])
+                    
+                    for i in range (Y1_label[:, sel_samples_train, :].shape[1]):
+                        class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
+                        class_predicted = int(class_predicted[0])
+                        class_gt = np.where(Y1_label[:, sel_samples_train, :][0][i] == np.amax(Y1_label[:, sel_samples_train, :][0][i]))
+                        class_gt = int(class_gt[0])
+                        # Adjust format class mapping (pig,bg) to (pig,others,bg)
+                        if len(class_mapping) != len(class_mapping_label):
+                            if class_predicted == len(class_mapping) - 1:
+                                class_predicted = class_predicted + 1
+                                
+                        class_confusion_matrix_train[class_predicted, class_gt] = class_confusion_matrix_train[class_predicted, class_gt] + 1
                     # Save boxes with (boxe, cls, regr)
                     #Y_detection.append( (X2_train[:, sel_samples_train[i], :][0], P_cls[0][i], P_regr[0][i]))
-            
+                else:
+                    break
             #all_dets = get_detections_boxes(Y_detection,C,class_mapping)
 
             #detection_confusion_matrix = compare_detection_to_groundtruth(img_data_label['bboxes'], all_dets)
@@ -594,7 +593,7 @@ for epoch_num in range(num_epochs):
 
                 overlapping_bboxes = np.zeros(len(class_mapping_test))
                 for num_image in range (len(test_imgs)):
-                    print("test image {}/{} processed".format(num_image+1,len(test_imgs)))
+                    print("epoch {}, test image {}/{} processed".format(epoch_num, num_image+1,len(test_imgs)))
                     # Generate X (x_img) and label Y ([y_rpn_cls, y_rpn_regr])
                     X_test, Y_test, img_data_test, debug_img_test, debug_num_pos_test = next(data_gen_test)
                     # Train rpn model and get loss value [_, loss_rpn_cls, loss_rpn_regr]
