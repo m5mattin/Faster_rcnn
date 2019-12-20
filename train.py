@@ -266,9 +266,9 @@ if True:
                                                 'rpn_00', 'rpn_01' , 'rpn_02',
                                                 'rpn_10', 'rpn_11' , 'rpn_12',
                                                 'loss_class_cls', 'loss_class_regr',
-                                                'class_00', 'class_01', 'class_02'
-                                                'class_10', 'class_11', 'class_12'
-                                                'class_20', 'class_21', 'class_22'
+                                                'class_00', 'class_01', 'class_02',
+                                                'class_10', 'class_11', 'class_12',
+                                                'class_20', 'class_21', 'class_22',
                                                 'curr_loss'])
 
     record_df_test = pd.DataFrame(columns=[    'loss_rpn_cls', 'loss_rpn_regr', 
@@ -278,9 +278,9 @@ if True:
                                                 'rpn_00', 'rpn_01' , 'rpn_02',
                                                 'rpn_10', 'rpn_11' , 'rpn_12',
                                                 'loss_class_cls', 'loss_class_regr',
-                                                'class_00', 'class_01', 'class_02'
-                                                'class_10', 'class_11', 'class_12'
-                                                'class_20', 'class_21', 'class_22'
+                                                'class_00', 'class_01', 'class_02',
+                                                'class_10', 'class_11', 'class_12',
+                                                'class_20', 'class_21', 'class_22',
                                                 'curr_loss'])
 
 optimizer = Adam(lr=1e-5)
@@ -338,7 +338,7 @@ for epoch_num in range(num_epochs):
 
     # RPN
 
-    overlapping_bboxes = np.zeros(len(class_mapping_label))
+
     rpn_confusion_matrix_train = np.zeros((2,3))
     rpn_confusion_matrix_test = np.zeros((2,3))
 
@@ -378,6 +378,7 @@ for epoch_num in range(num_epochs):
             # Get real labels for rpn boxes (pig, others, bg)
             X2_label, Y1_label, Y2_label, IouS_label = calc_iou(R_train, img_data_label, C, class_mapping_label)
             
+            overlapping_bboxes = np.zeros((3))
             # Get matches between rpn boxes and real classes (number of pig, number of others, number of bg)
             for i in range(len(Y1_label[0])):
                 for j in range(len(class_mapping_label)):
@@ -445,7 +446,7 @@ for epoch_num in range(num_epochs):
             Y_detection = []
 
             # train on number of num rois while there is positive 
-            print("mo")
+
             for i in range( int((len(pig_samples)) // ((C.num_rois/2))+1 )):
                 if i == 0 or (len(pig_samples) >= (C.num_rois/4)):
                     selected_pig_samples = []
@@ -591,7 +592,6 @@ for epoch_num in range(num_epochs):
                                 'class_22':round(class_confusion_matrix_train[2,2], 3),
                                     }
 
-                overlapping_bboxes = np.zeros(len(class_mapping_test))
                 for num_image in range (len(test_imgs)):
                     print("epoch {}, test image {}/{} processed".format(epoch_num, num_image+1,len(test_imgs)))
                     # Generate X (x_img) and label Y ([y_rpn_cls, y_rpn_regr])
@@ -608,7 +608,7 @@ for epoch_num in range(num_epochs):
                     # Y1: one hot code for bboxes from above => x_roi (X)
                     # Y2: corresponding labels and corresponding gt bboxes
                     X2_test, Y1_test, Y2_test, IouS_test = calc_iou(R_test, img_data_test, C, class_mapping)
-
+                    overlapping_bboxes = np.zeros((3))
                     for i in range(len(Y1_test[0])):
                         for j in range(len(class_mapping_test)):
                             if (Y1_test[:,i,j]) == 1:
@@ -622,10 +622,6 @@ for epoch_num in range(num_epochs):
                         rpn_accuracy_rpn_monitor_test.append(0)
                         rpn_accuracy_for_epoch_test.append(0)
                         continue
-                    
-                    # Find out the positive anchors and negative anchors
-                    neg_samples_test = np.where(Y1_test[0, :, -1] == 1)
-                    pos_samples_test = np.where(Y1_test[0, :, -1] == 0)
                     
                     loss_class_test = []
                     for k in range(int(len(Y1_test[0])//C.num_rois)):
@@ -643,18 +639,18 @@ for epoch_num in range(num_epochs):
                             class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
 
                     # Loss rpn  
-                    losses_test[iter_num, 0] = loss_rpn_test[1]
-                    losses_test[iter_num, 1] = loss_rpn_test[2]
+                    losses_test[num_image, 0] = loss_rpn_test[1]
+                    losses_test[num_image, 1] = loss_rpn_test[2]
                     
                     # Loss classification
                     loss_class_test = np.asarray(loss_class_test)
-                    losses_test[iter_num, 2] = np.mean(loss_class_test[:,1])
-                    losses_test[iter_num, 3] = np.mean(loss_class_test[:,2])
+                    losses_test[num_image, 2] = np.mean(loss_class_test[:,1])
+                    losses_test[num_image, 3] = np.mean(loss_class_test[:,2])
 
                     # Overlap RPN
-                    losses_test[iter_num, 4] = overlapping_bboxes[0]
-                    losses_test[iter_num, 5] = overlapping_bboxes[1]
-                    losses_test[iter_num, 6] = overlapping_bboxes[2]
+                    losses_test[num_image, 4] = overlapping_bboxes[0]
+                    losses_test[num_image, 5] = overlapping_bboxes[1]
+                    losses_test[num_image, 6] = overlapping_bboxes[2]
 
                     if num_image == (len(test_imgs)-1):
                         
@@ -668,34 +664,32 @@ for epoch_num in range(num_epochs):
 
                         curr_loss_test = loss_rpn_cls_test + loss_rpn_regr_test + loss_class_cls_test + loss_class_regr_test
 
-                        new_row_test = { 'mean_overlapping_bboxes_pig':round(overlapping_pigs_rpn, 3), 
-                                    'mean_overlapping_bboxes_others':round(overlapping_others_rpn, 3),
-                                    'mean_overlapping_bboxes_neg':round(overlapping_bg_rpn, 3),
-                                    'loss_rpn_cls':round(loss_rpn_cls_test, 3), 
-                                    'loss_rpn_regr':round(loss_rpn_regr_test, 3), 
-                                    'loss_class_cls':round(loss_class_cls_test, 3), 
-                                    'loss_class_regr':round(loss_class_regr_test, 3), 
-                                    'curr_loss':round(curr_loss_test, 3),
-                                    'rpn_00':round(rpn_confusion_matrix_test[0,0], 3),
-                                    'rpn_01':round(rpn_confusion_matrix_test[0,1], 3) ,
-                                    'rpn_02':round(rpn_confusion_matrix_test[0,2], 3),
-                                    'rpn_10':round(rpn_confusion_matrix_test[1,0], 3),
-                                    'rpn_11':round(rpn_confusion_matrix_test[1,1], 3) ,
-                                    'rpn_12':round(rpn_confusion_matrix_test[1,2], 3),      
-                                    'class_00':round(class_confusion_matrix_test[0,0], 3),
-                                    'class_01':round(class_confusion_matrix_test[0,1], 3) ,
-                                    'class_02':round(class_confusion_matrix_test[0,2], 3),
-                                    'class_10':round(class_confusion_matrix_test[1,0], 3),
-                                    'class_11':round(class_confusion_matrix_test[1,1], 3) ,
-                                    'class_12':round(class_confusion_matrix_test[1,2], 3),
-                                    'class_20':round(class_confusion_matrix_test[2,0], 3),
-                                    'class_21':round(class_confusion_matrix_test[2,1], 3) ,
-                                    'class_22':round(class_confusion_matrix_test[2,2], 3),
+                        new_row_test = {    'mean_overlapping_bboxes_pig':round(overlapping_pigs_rpn, 3), 
+                                            'mean_overlapping_bboxes_others':round(overlapping_others_rpn, 3),
+                                            'mean_overlapping_bboxes_neg':round(overlapping_bg_rpn, 3),
+                                            'loss_rpn_cls':round(loss_rpn_cls_test, 3), 
+                                            'loss_rpn_regr':round(loss_rpn_regr_test, 3), 
+                                            'loss_class_cls':round(loss_class_cls_test, 3), 
+                                            'loss_class_regr':round(loss_class_regr_test, 3), 
+                                            'curr_loss':round(curr_loss_test, 3),
+                                            'rpn_00':round(rpn_confusion_matrix_test[0,0], 3),
+                                            'rpn_01':round(rpn_confusion_matrix_test[0,1], 3) ,
+                                            'rpn_02':round(rpn_confusion_matrix_test[0,2], 3),
+                                            'rpn_10':round(rpn_confusion_matrix_test[1,0], 3),
+                                            'rpn_11':round(rpn_confusion_matrix_test[1,1], 3) ,
+                                            'rpn_12':round(rpn_confusion_matrix_test[1,2], 3),      
+                                            'class_00':round(class_confusion_matrix_test[0,0], 3),
+                                            'class_01':round(class_confusion_matrix_test[0,1], 3) ,
+                                            'class_02':round(class_confusion_matrix_test[0,2], 3),
+                                            'class_10':round(class_confusion_matrix_test[1,0], 3),
+                                            'class_11':round(class_confusion_matrix_test[1,1], 3) ,
+                                            'class_12':round(class_confusion_matrix_test[1,2], 3),
+                                            'class_20':round(class_confusion_matrix_test[2,0], 3),
+                                            'class_21':round(class_confusion_matrix_test[2,1], 3) ,
+                                            'class_22':round(class_confusion_matrix_test[2,2], 3),
                                     }
-
                         record_df_train = record_df_train.append(new_row_train, ignore_index=True)
                         record_df_train.to_csv(record_path_train, index=0)
-                    
                         record_df_test = record_df_test.append(new_row_test, ignore_index=True)
                         record_df_test.to_csv(record_path_test, index=0)
 

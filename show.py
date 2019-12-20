@@ -126,7 +126,7 @@ axs[1].plot(    np.arange(0, r_epochs),
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 acc_class_train,
-                label='eval set: class_pig_acc',
+                label='train set: class_pig_acc',
                 color=colors['darkorange'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
