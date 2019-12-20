@@ -462,13 +462,13 @@ for epoch_num in range(num_epochs):
                         pig_samples.remove(x)
                     # select quarter with others
                     if len(others_samples) > C.num_rois/4:
-                        selected_others_samples = np.random.choice(others_samples, int((C.num_rois - len(selected_pig_samples))/2), replace=False).tolist()
+                        selected_others_samples = np.random.choice(others_samples, int(C.num_rois/4), replace=False).tolist()
                     else:
                         selected_others_samples = others_samples.copy()
                     for x in (selected_others_samples):
                         others_samples.remove(x)
                     # select rest with backgroung
-                    selected_bg_samples = np.random.choice(bg_samples, C.num_rois - len(selected_pig_samples) - len(selected_others_samples), replace=False).tolist()
+                    selected_bg_samples = np.random.choice(bg_samples, C.num_rois - len(selected_pig_samples) - len(selected_others_samples), replace=True).tolist()
                     sel_samples_train = selected_pig_samples + selected_others_samples + selected_bg_samples
                 
                 # training_data: [X, X2[:, sel_samples, :]]
