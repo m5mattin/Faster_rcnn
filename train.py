@@ -622,7 +622,9 @@ for epoch_num in range(num_epochs):
                         continue
                     t_class_total_start = time.time()
                     loss_class_test = []
+                    
                     for k in range(int(len(Y1_test[0])//C.num_rois)):
+                        print(k)
                         sel_samples_test = []
                         for j in range(C.num_rois):
                             sel_samples_test.append(C.num_rois*k+j)
@@ -637,6 +639,7 @@ for epoch_num in range(num_epochs):
                             class_gt = np.where(Y1_test[:, sel_samples_test, :][0][i] == np.amax(Y1_test[:, sel_samples_test, :][0][i]))
                             class_gt = int(class_gt[0])
                             class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
+                    
                     print("time total classification {}".format(time.time()-t_class_total_start))
                     # Loss rpn  
                     losses_test[num_image, 0] = loss_rpn_test[1]
