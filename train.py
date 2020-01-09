@@ -286,9 +286,7 @@ if True:
 optimizer = Adam(lr=1e-5)
 optimizer_classifier = Adam(lr=1e-5)
 model_rpn.compile(optimizer=optimizer, loss=[rpn_loss_cls(num_anchors), rpn_loss_regr(num_anchors)])
-print(len(classes_count_train))
 print(classes_count_train)
-print(len(classes_count_test))
 print(classes_count_test)
 
 model_classifier.compile(optimizer=optimizer_classifier, loss=[class_loss_cls, class_loss_regr(len(classes_count_train)-1)], metrics=["accuracy"])
@@ -371,7 +369,6 @@ for epoch_num in range(num_epochs):
             # X2: bboxes that iou > C.classifier_min_overlap for all gt bboxes in 300 non_max_suppression bboxes
             # Y1: one hot code for bboxes from above => x_roi (X)
             # Y2: corresponding labels and corresponding gt bboxes
-
             X2_train, Y1_train, Y2_train, IouS_train = calc_iou(R_train, img_data_train, C, class_mapping)
 
             # RPN evaluation 
@@ -481,7 +478,8 @@ for epoch_num in range(num_epochs):
                     loss = model_classifier.train_on_batch([X_train, X2_train[:, sel_samples_train, :]], [Y1_train[:, sel_samples_train, :], Y2_train[:, sel_samples_train, :]])
                     loss_class_train.append(loss)
                     [P_cls, P_regr] = model_classifier.predict([X_train, X2_train[:, sel_samples_train, :]])
-                    
+
+
                     for i in range (Y1_label[:, sel_samples_train, :].shape[1]):
                         class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
                         class_predicted = int(class_predicted[0])
@@ -499,7 +497,7 @@ for epoch_num in range(num_epochs):
                     break
             #all_dets = get_detections_boxes(Y_detection,C,class_mapping)
 
-            #detection_confusion_matrix = compare_detection_to_groundtruth(img_data_label['bboxes'], all_dets)
+            #detection_confusion_matrix = compare_detection_to_groundtruth(img_dataf_label['bboxes'], all_dets)
 
               
             # Loss rpn  
@@ -622,7 +620,7 @@ for epoch_num in range(num_epochs):
                         rpn_accuracy_rpn_monitor_test.append(0)
                         rpn_accuracy_for_epoch_test.append(0)
                         continue
-                    
+                    t_class_total_start = time.time()
                     loss_class_test = []
                     for k in range(int(len(Y1_test[0])//C.num_rois)):
                         sel_samples_test = []
@@ -630,14 +628,16 @@ for epoch_num in range(num_epochs):
                             sel_samples_test.append(C.num_rois*k+j)
                         loss = model_classifier.test_on_batch([X_test, X2_test[:, sel_samples_test, :]], [Y1_test[:, sel_samples_test, :], Y2_test[:, sel_samples_test, :]])
                         loss_class_test.append(loss)
+                        t_class_start = time.time()
                         [P_cls, P_regr] = model_classifier.predict([X_test, X2_test[:, sel_samples_test, :]])
+                        print("time one class {}".format(time.time()-t_class_start))
                         for i in range (Y1_test[:, sel_samples_train, :].shape[1]):
                             class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
                             class_predicted = int(class_predicted[0])
                             class_gt = np.where(Y1_test[:, sel_samples_test, :][0][i] == np.amax(Y1_test[:, sel_samples_test, :][0][i]))
                             class_gt = int(class_gt[0])
                             class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
-
+                    print("time total classification {}".format(time.time()-t_class_total_start))
                     # Loss rpn  
                     losses_test[num_image, 0] = loss_rpn_test[1]
                     losses_test[num_image, 1] = loss_rpn_test[2]
