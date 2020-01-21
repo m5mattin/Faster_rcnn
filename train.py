@@ -414,7 +414,6 @@ for epoch_num in range(num_epochs):
             rpn_accuracy_rpn_monitor_train.append(len(pos_samples_train))
             rpn_accuracy_for_epoch_train.append((len(pos_samples_train)))
 
-
             pig_samples = pig_samples.tolist()
             others_samples = others_samples.tolist()
             bg_samples = bg_samples.tolist()
@@ -457,7 +456,6 @@ for epoch_num in range(num_epochs):
                     loss = model_classifier.train_on_batch([X_train, X2_train[:, sel_samples_train, :]], [Y1_train[:, sel_samples_train, :], Y2_train[:, sel_samples_train, :]])
                     loss_class_train.append(loss)
                     [P_cls, P_regr] = model_classifier.predict([X_train, X2_train[:, sel_samples_train, :]])
-
 
                     for i in range (Y1_label[:, sel_samples_train, :].shape[1]):
                         class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
@@ -582,7 +580,6 @@ for epoch_num in range(num_epochs):
                         rpn_accuracy_rpn_monitor_test.append(0)
                         rpn_accuracy_for_epoch_test.append(0)
                         continue
-                    t_class_total_start = time.time()
                     loss_class_test = []
                     
                     for k in range(int(len(Y1_test[0])//C.num_rois)):
@@ -591,17 +588,13 @@ for epoch_num in range(num_epochs):
                             sel_samples_test.append(C.num_rois*k+j)
                         loss = model_classifier.test_on_batch([X_test, X2_test[:, sel_samples_test, :]], [Y1_test[:, sel_samples_test, :], Y2_test[:, sel_samples_test, :]])
                         loss_class_test.append(loss)
-                        t_class_start = time.time()
                         [P_cls, P_regr] = model_classifier.predict([X_test, X2_test[:, sel_samples_test, :]])
-                        print("time one class {}".format(time.time()-t_class_start))
                         for i in range (Y1_test[:, sel_samples_train, :].shape[1]):
                             class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
                             class_predicted = int(class_predicted[0])
                             class_gt = np.where(Y1_test[:, sel_samples_test, :][0][i] == np.amax(Y1_test[:, sel_samples_test, :][0][i]))
                             class_gt = int(class_gt[0])
                             class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
-                    
-                    print("time total classification {}".format(time.time()-t_class_total_start))
                     # Loss rpn  
                     losses_test[num_image, 0] = loss_rpn_test[1]
                     losses_test[num_image, 1] = loss_rpn_test[2]

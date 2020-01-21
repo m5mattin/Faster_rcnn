@@ -320,21 +320,20 @@ def classifier_layer(base_layers, input_rois, num_rois, nb_classes = 4):
     # out_roi_pool.shape = (1, num_rois, channels, pool_size, pool_size)
     # num_rois (4) 7x7 roi pooling
     out_roi_pool = RoiPoolingConv(pooling_regions, num_rois)([base_layers, input_rois])
-
+    #print("1 : ",out_roi_pool)
     # Flatten the convlutional layer and connected to 2 FC and 2 dropout
     out = TimeDistributed(Flatten(name='flatten'))(out_roi_pool)
     out = TimeDistributed(Dense(4096, activation='relu', name='fc1'))(out)
     out = TimeDistributed(Dropout(0.5))(out)
     out = TimeDistributed(Dense(4096, activation='relu', name='fc2'))(out)
     out = TimeDistributed(Dropout(0.5))(out)
-
+    
     # There are two output layer
     # out_class: softmax acivation function for classify the class name of the object
     # out_regr: linear activation function for bboxes coordinates regression
     out_class = TimeDistributed(Dense(nb_classes, activation='softmax', kernel_initializer='zero'), name='dense_class_{}'.format(nb_classes))(out)
     # note: no regression target for bg class
     out_regr = TimeDistributed(Dense(4 * (nb_classes-1), activation='linear', kernel_initializer='zero'), name='dense_regress_{}'.format(nb_classes))(out)
-
     return [out_class, out_regr]
 
 ############################################################
@@ -365,6 +364,7 @@ class RoiPoolingConv(Layer):
         self.pool_size = pool_size
         self.num_rois = num_rois
         super(RoiPoolingConv, self).__init__(**kwargs)
+        
 
     def build(self, input_shape):
         self.nb_channels = input_shape[0][3]
@@ -407,7 +407,7 @@ class RoiPoolingConv(Layer):
         final_output = K.concatenate(outputs, axis=0)
 
         # Reshape to (1, num_rois, pool_size, pool_size, nb_channels)
-        # Might be (1, 4, 7, 7, 3)
+        # Might be (1, 4, 7, 7, 512)
         final_output = K.reshape(final_output, (1, self.num_rois, self.pool_size, self.pool_size, self.nb_channels))
 
         # permute_dimensions is similar to transpose
@@ -421,6 +421,7 @@ class RoiPoolingConv(Layer):
                   'num_rois': self.num_rois}
         base_config = super(RoiPoolingConv, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
 ############################################################
                     #Calculate IoU
 ############################################################
@@ -525,7 +526,6 @@ def calc_rpn(C, img_data, width, height, resized_width, resized_height, img_leng
         gta[bbox_num, 3] = bbox['y2'] * (resized_height / float(height))
 
     # rpn ground truth
-
     for anchor_size_idx in range(len(anchor_sizes)):
         for anchor_ratio_idx in range(n_anchratios):
             anchor_x = anchor_sizes[anchor_size_idx] * anchor_ratios[anchor_ratio_idx][0]
@@ -559,7 +559,7 @@ def calc_rpn(C, img_data, width, height, resized_width, resized_height, img_leng
                     best_iou_for_loc = 0.0
                     
 
-                    for bbox_num in range(num_bboxes):    
+                    for bbox_num in range(num_bboxes):
                         # get IOU of the current GT box and the current anchor box
                         curr_iou = iou([gta[bbox_num, 0], gta[bbox_num, 2], gta[bbox_num, 1], gta[bbox_num, 3]], [x1_anc, y1_anc, x2_anc, y2_anc])
 
