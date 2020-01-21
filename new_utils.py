@@ -1686,7 +1686,6 @@ def get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, m
     X2 = X2_train[:,sel_samples, :]
 
     if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
-        X2_train = X2_train[:,sel_samples,:]
         Y1_train = Y1_train[:,sel_samples,:]
         Y2_train = Y2_train[:,sel_samples,:]
         Y1 = np.zeros(Y1_train[:,:,0:2].shape, dtype=int)
@@ -1707,6 +1706,34 @@ def get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, m
         Y2 = Y2_train[:,sel_samples, :]
     return X2, Y1, Y2, sel_samples
 
+def get_testing_batch_classifier(C, X2_test, Y1_test, Y2_test, mode, k):
+    
+    
+    sel_samples = []
+    for i in range(C.num_rois):
+        sel_samples.append(k*C.num_rois + i)
+    X2 = X2_test[:,sel_samples, :]
+    if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
+        X2_test = X2_test[:,sel_samples,:]
+        Y1_test = Y1_test[:,sel_samples,:]
+        Y2_test = Y2_test[:,sel_samples,:]
+        Y1 = np.zeros(Y1_test[:,:,0:2].shape, dtype=int)
+        Y2 = np.zeros(Y2_test[:,:,0:8].shape)
+
+        for i in range (Y1_test.shape[1]):
+            if Y1_test[0,i,0] == 1:
+                Y1[0,i,0] = 1
+                Y1[0,i,1] = 0
+                Y2[:,i,0:4] = Y2_test[:,i,0:4]
+                Y2[:,i,4:8] = Y2_test[:,i,8:12]
+            else:
+                Y1[0,i,0] = 0
+                Y1[0,i,1] = 1
+                Y2[:,i,0:8] = np.zeros((8))
+    else: 
+        Y1 = Y1_test[:,sel_samples, :]
+        Y2 = Y2_test[:,sel_samples, :]
+    return X2, Y1, Y2, sel_samples
 ############################################################
                     #Test all epochs
 ############################################################

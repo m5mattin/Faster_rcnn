@@ -215,7 +215,7 @@ with open(config_output_filename, 'wb') as config_f:
 # Get train data generator which generate X, Y, image_data
 
 data_gen_train = get_anchor_gt(train_imgs, C, get_img_output_length, mode=mode)
-data_gen_test = get_anchor_gt(test_imgs, C, get_img_output_length, mode='test')
+data_gen_test = get_anchor_gt(test_imgs, C, get_img_output_length, mode=mode)
 
 ############################################################
                     #Build the model
@@ -403,11 +403,14 @@ for epoch_num in range(num_epochs):
                 class_gt = np.where(Y1_train[0, sel_samples[i], :]== np.amax(Y1_train[0, sel_samples[i], :]))
                 class_gt = int(class_gt[0])
 
+                if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
+                    if class_predicted == len(class_mapping) - 1:
+                        class_predicted = class_predicted + 1
+
                 # print(class_predicted,P_cls[0][i])
                 # print(class_gt,Y1_train[0, sel_samples[i], :])
 
                 class_confusion_matrix_train[class_predicted, class_gt] = class_confusion_matrix_train[class_predicted, class_gt] + 1
-
             # Save boxes with (boxe, cls, regr)
             #Y_detection.append( (X2_train[:, sel_samples_train[i], :][0], P_cls[0][i], P_regr[0][i]))
             #all_dets = get_detections_boxes(Y_detection,C,class_mapping)
@@ -425,17 +428,18 @@ for epoch_num in range(num_epochs):
 
             progbar_train.update(iter_num, [('rpn_cls', np.mean(losses_train[:iter_num, 0])), ('rpn_regr', np.mean(losses_train[:iter_num, 1])),
                                       ('final_cls', np.mean(losses_train[:iter_num, 2])), ('final_regr', np.mean(losses_train[:iter_num, 3]))])
-            
+                            
             if iter_num == epoch_length:
                 
                 loss_rpn_cls_train = np.mean(losses_train[:, 0])
                 loss_rpn_regr_train = np.mean(losses_train[:, 1])
                 loss_class_cls_train = np.mean(losses_train[:, 2])
                 loss_class_regr_train = np.mean(losses_train[:, 3])
-                rpn_mop = np.mean(rpn_overlaping_train[:,0,num_epochs])
-                rpn_moo = np.mean(rpn_overlaping_train[:,1,num_epochs])
-                rpn_mob = np.mean(rpn_overlaping_train[:,2,num_epochs])
 
+                rpn_mop = np.mean(rpn_overlaping_train[:,0,epoch_num])
+                rpn_moo = np.mean(rpn_overlaping_train[:,1,epoch_num])
+                rpn_mob = np.mean(rpn_overlaping_train[:,2,epoch_num])
+                
                 mean_overlapping_bboxes_train = float(sum(rpn_accuracy_for_epoch_train)) / len(rpn_accuracy_for_epoch_train)
                 rpn_accuracy_for_epoch_train = []
 
@@ -451,7 +455,6 @@ for epoch_num in range(num_epochs):
 
                 curr_loss_train = loss_rpn_cls_train + loss_rpn_regr_train + loss_class_cls_train + loss_class_regr_train
                 iter_num = 0
-                start_time = time.time()
 
 #                 if curr_loss_train < best_loss_train:
 #                     if C.verbose:
@@ -489,106 +492,118 @@ for epoch_num in range(num_epochs):
                                     'rpn_moo':round(rpn_moo),
                                     'rpn_mob':round(rpn_mob)
                                     }
-                record_df_train = record_df_train.append(new_row_train, ignore_index=True)
-                record_df_train.to_csv(record_path_train, index=0)
-                np.save('../overlaping_rpn_train.npy', rpn_overlaping_train)
-                break
 
-#                 for num_image in range (len(test_imgs)):
-#                     print("epoch {}, test image {}/{} processed".format(epoch_num, num_image+1,len(test_imgs)))
-#                     # Generate X (x_img) and label Y ([y_rpn_cls, y_rpn_regr])
-#                     X_test, Y_test, img_data_test, debug_img_test, debug_num_pos_test = next(data_gen_test)
-#                     # Train rpn model and get loss value [_, loss_rpn_cls, loss_rpn_regr]
-#                     loss_rpn_test = model_rpn.test_on_batch(X_test, Y_test)
-#                     # Get predicted rpn from rpn model [rpn_cls, rpn_regr]
-#                     P_rpn_test = model_rpn.predict_on_batch(X_test)
-#                     # R: bboxes (shape=(300,4))
-#                     # Convert rpn layer to roi bboxes
-#                     R_test = rpn_to_roi(P_rpn_test[0], P_rpn_test[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)                     
-#                     # note: calc_iou converts from (x1,y1,x2,y2) to (x,y,w,h) format
-#                     # X2: bboxes that iou > C.classifier_min_overlap for all gt bboxes in 300 non_max_suppression bboxes
-#                     # Y1: one hot code for bboxes from above => x_roi (X)
-#                     # Y2: corresponding labels and corresponding gt bboxes
-#                     X2_test, Y1_test, Y2_test, IouS_test = calc_iou(R_test, img_data_test, C, class_mapping)
+                for num_image in range (len(test_imgs)):
+                    print("epoch {}, test image {}/{} processed".format(epoch_num, num_image+1,len(test_imgs)))
+                    # Generate X (x_img) and label Y ([y_rpn_cls, y_rpn_regr])
+                    X_test, Y_test, img_data_test, debug_img_test, debug_num_pos_test = next(data_gen_test)
+                    # Train rpn model and get loss value [_, loss_rpn_cls, loss_rpn_regr]
 
-#                     for i in range(len(Y1_test[0])):
-#                         for j in range(len(class_mapping_test)):
-#                             if (Y1_test[:,i,j]) == 1:
-#                                 rpn_overlaping_test[num_image,j,epoch_num] = rpn_overlaping_test[num_image,j,epoch_num] + 1
+                    loss_rpn_test = model_rpn.test_on_batch(X_test, Y_test)
+                    # Get predicted rpn from rpn model [rpn_cls, rpn_regr]
+                    P_rpn_test = model_rpn.predict_on_batch(X_test)
+                    # R: bboxes (shape=(300,4))
+                    # Convert rpn layer to roi bboxes
+                    R_test = rpn_to_roi(P_rpn_test[0], P_rpn_test[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)                     
+                    # note: calc_iou converts from (x1,y1,x2,y2) to (x,y,w,h) format
+                    # X2: bboxes that iou > C.classifier_min_overlap for all gt bboxes in 300 non_max_suppression bboxes
+                    # Y1: one hot code for bboxes from above => x_roi (X)
+                    # Y2: corresponding labels and corresponding gt bboxes
+                    X2_test, Y1_test, Y2_test, IouS_test, overlap_others = calc_iou(R_test, img_data_test, C, class_mapping_label)
                     
-#                     tmp_confusion = compare_rpn_to_groundtruth(img_data_test['bboxes'],R_test*C.rpn_stride,num_boxes=300)
-#                     rpn_confusion_matrix_test = rpn_confusion_matrix_test + tmp_confusion
+                    for i in range(len(Y1_test[0])):
+                        for j in range(len(class_mapping_label)):
+                            if (Y1_test[:,i,j]) == 1:
+                                rpn_overlaping_test[num_image,j,epoch_num] = rpn_overlaping_test[num_image,j,epoch_num] + 1
                     
-#                     # If X2 is None means there are no matching bboxes
-#                     if X2_test is None:
-#                         rpn_accuracy_rpn_monitor_test.append(0)
-#                         rpn_accuracy_for_epoch_test.append(0)
-#                         continue
-#                     loss_class_test = []
+                    tmp_confusion = compare_rpn_to_groundtruth(img_data_test['bboxes'],R_test*C.rpn_stride,num_boxes=300)
+                    rpn_confusion_matrix_test = rpn_confusion_matrix_test + tmp_confusion
                     
-#                     for k in range(int(len(Y1_test[0])//C.num_rois)):
-#                         sel_samples_test = []
-#                         for j in range(C.num_rois):
-#                             sel_samples_test.append(C.num_rois*k+j)
-#                         loss = model_classifier.test_on_batch([X_test, X2_test[:, sel_samples_test, :]], [Y1_test[:, sel_samples_test, :], Y2_test[:, sel_samples_test, :]])
-#                         loss_class_test.append(loss)
-#                         [P_cls, P_regr] = model_classifier.predict([X_test, X2_test[:, sel_samples_test, :]])
-#                         for i in range (Y1_test[:, sel_samples_train, :].shape[1]):
-#                             class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
-#                             class_predicted = int(class_predicted[0])
-#                             class_gt = np.where(Y1_test[:, sel_samples_test, :][0][i] == np.amax(Y1_test[:, sel_samples_test, :][0][i]))
-#                             class_gt = int(class_gt[0])
-#                             class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
-#                     # Loss rpn  
-#                     losses_test[num_image, 0] = loss_rpn_test[1]
-#                     losses_test[num_image, 1] = loss_rpn_test[2]
+                    # If X2 is None means there are no matching bboxes
+                    if X2_test is None:
+                        rpn_accuracy_rpn_monitor_test.append(0)
+                        rpn_accuracy_for_epoch_test.append(0)
+                        continue
                     
-#                     # Loss classification
-#                     loss_class_test = np.asarray(loss_class_test)
-#                     losses_test[num_image, 2] = np.mean(loss_class_test[:,1])
-#                     losses_test[num_image, 3] = np.mean(loss_class_test[:,2])
+                    loss_class_test = []
+                    
+                    for k in range(int(len(Y1_test[0])//C.num_rois)):
+                        X2, Y1, Y2, sel_samples = get_testing_batch_classifier(C, X2_test, Y1_test, Y2_test, mode, k)
+                        loss = model_classifier.test_on_batch([X_test, X2], [Y1, Y2])
+                        loss_class_test.append(loss)
+                        [P_cls, P_regr] = model_classifier.predict([X_test, X2])
 
-#                     if num_image == (len(test_imgs)-1):
+                        for i in range (len(sel_samples)):
+                            #print(Y1_test[0, sel_samples[i], :],P_cls[0][i])
+                            class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
+                            class_predicted = int(class_predicted[0])
+
+                            if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
+                                if class_predicted == len(class_mapping) - 1:
+                                    class_predicted = class_predicted + 1
+
+                            class_gt = np.where(Y1_test[0, sel_samples[i], :]== np.amax(Y1_test[0, sel_samples[i], :]))
+                            class_gt = int(class_gt[0])
+                            class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
+                    
+                    #print(class_confusion_matrix_test)
+                    # Loss rpn  
+                    losses_test[num_image, 0] = loss_rpn_test[1]
+                    losses_test[num_image, 1] = loss_rpn_test[2]
+                    
+                    # Loss classification
+                    loss_class_test = np.asarray(loss_class_test)
+                    losses_test[num_image, 2] = np.mean(loss_class_test[:,1])
+                    losses_test[num_image, 3] = np.mean(loss_class_test[:,2])
+
+                    if num_image == (len(test_imgs)-1):
                         
-#                         loss_rpn_cls_test = np.mean(losses_test[:, 0])
-#                         loss_rpn_regr_test = np.mean(losses_test[:, 1])
-#                         loss_class_cls_test = np.mean(losses_test[:, 2])
-#                         loss_class_regr_test = np.mean(losses_test[:, 3])
+                        loss_rpn_cls_test = np.mean(losses_test[:, 0])
+                        loss_rpn_regr_test = np.mean(losses_test[:, 1])
+                        loss_class_cls_test = np.mean(losses_test[:, 2])
+                        loss_class_regr_test = np.mean(losses_test[:, 3])
 
-#                         curr_loss_test = loss_rpn_cls_test + loss_rpn_regr_test + loss_class_cls_test + loss_class_regr_test
+                        rpn_mop = np.mean(rpn_overlaping_test[:,0,epoch_num])
+                        rpn_moo = np.mean(rpn_overlaping_test[:,1,epoch_num])
+                        rpn_mob = np.mean(rpn_overlaping_test[:,2,epoch_num])
 
-#                         new_row_test = {    'loss_rpn_cls':round(loss_rpn_cls_test, 3), 
-#                                             'loss_rpn_regr':round(loss_rpn_regr_test, 3), 
-#                                             'loss_class_cls':round(loss_class_cls_test, 3), 
-#                                             'loss_class_regr':round(loss_class_regr_test, 3), 
-#                                             'curr_loss':round(curr_loss_test, 3),
-#                                             'rpn_00':round(rpn_confusion_matrix_test[0,0], 3),
-#                                             'rpn_01':round(rpn_confusion_matrix_test[0,1], 3) ,
-#                                             'rpn_02':round(rpn_confusion_matrix_test[0,2], 3),
-#                                             'rpn_10':round(rpn_confusion_matrix_test[1,0], 3),
-#                                             'rpn_11':round(rpn_confusion_matrix_test[1,1], 3) ,
-#                                             'rpn_12':round(rpn_confusion_matrix_test[1,2], 3),      
-#                                             'class_00':round(class_confusion_matrix_test[0,0], 3),
-#                                             'class_01':round(class_confusion_matrix_test[0,1], 3) ,
-#                                             'class_02':round(class_confusion_matrix_test[0,2], 3),
-#                                             'class_10':round(class_confusion_matrix_test[1,0], 3),
-#                                             'class_11':round(class_confusion_matrix_test[1,1], 3) ,
-#                                             'class_12':round(class_confusion_matrix_test[1,2], 3),
-#                                             'class_20':round(class_confusion_matrix_test[2,0], 3),
-#                                             'class_21':round(class_confusion_matrix_test[2,1], 3) ,
-#                                             'class_22':round(class_confusion_matrix_test[2,2], 3),
-#                                     }
+                        curr_loss_test = loss_rpn_cls_test + loss_rpn_regr_test + loss_class_cls_test + loss_class_regr_test
 
-#                         record_df_train = record_df_train.append(new_row_train, ignore_index=True)
-#                         record_df_train.to_csv(record_path_train, index=0)
-#                         np.save('../overlaping_rpn_train.npy', rpn_overlaping_train)
-#                         record_df_test = record_df_test.append(new_row_test, ignore_index=True)
-#                         record_df_test.to_csv(record_path_test, index=0)
-#                         np.save('../overlaping_rpn_test.npy', rpn_overlaping_test)
+                        new_row_test = {    'loss_rpn_cls':round(loss_rpn_cls_test, 3), 
+                                            'loss_rpn_regr':round(loss_rpn_regr_test, 3), 
+                                            'loss_class_cls':round(loss_class_cls_test, 3), 
+                                            'loss_class_regr':round(loss_class_regr_test, 3), 
+                                            'curr_loss':round(curr_loss_test, 3),
+                                            'rpn_00':round(rpn_confusion_matrix_test[0,0], 3),
+                                            'rpn_01':round(rpn_confusion_matrix_test[0,1], 3) ,
+                                            'rpn_02':round(rpn_confusion_matrix_test[0,2], 3),
+                                            'rpn_10':round(rpn_confusion_matrix_test[1,0], 3),
+                                            'rpn_11':round(rpn_confusion_matrix_test[1,1], 3) ,
+                                            'rpn_12':round(rpn_confusion_matrix_test[1,2], 3),      
+                                            'class_00':round(class_confusion_matrix_test[0,0], 3),
+                                            'class_01':round(class_confusion_matrix_test[0,1], 3) ,
+                                            'class_02':round(class_confusion_matrix_test[0,2], 3),
+                                            'class_10':round(class_confusion_matrix_test[1,0], 3),
+                                            'class_11':round(class_confusion_matrix_test[1,1], 3) ,
+                                            'class_12':round(class_confusion_matrix_test[1,2], 3),
+                                            'class_20':round(class_confusion_matrix_test[2,0], 3),
+                                            'class_21':round(class_confusion_matrix_test[2,1], 3) ,
+                                            'class_22':round(class_confusion_matrix_test[2,2], 3),
+                                            'rpn_mop':round(rpn_mop),
+                                            'rpn_moo':round(rpn_moo),
+                                            'rpn_mob':round(rpn_mob)
+                                    }
 
-#                 print("  time/step:{}".format(time.time()-st_step))
-#                 st_step = time.time()
-#                 break
+                        record_df_train = record_df_train.append(new_row_train, ignore_index=True)
+                        record_df_train.to_csv(record_path_train, index=0)
+                        np.save('../overlaping_rpn_train.npy', rpn_overlaping_train)
+                        record_df_test = record_df_test.append(new_row_test, ignore_index=True)
+                        record_df_test.to_csv(record_path_test, index=0)
+                        np.save('../overlaping_rpn_test.npy', rpn_overlaping_test)
+
+                print("  time/step:{}".format(time.time()-st_step))
+                st_step = time.time()
+                break
             
         except Exception as e:
             print('Exception: {}'.format(e))

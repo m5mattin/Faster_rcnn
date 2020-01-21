@@ -21,8 +21,6 @@ fig, axs = plt.subplots(1, 2)
 axs[0].set_title('Rpn',color='black')
 axs[1].set_title('Classification',color='black')
 
-
-
 ### RPN
 
 tp_rpn_test = record_test['rpn_00']
@@ -34,7 +32,8 @@ fn_rpn_train = record_train['rpn_10']
 recall_rpn_train = tp_rpn_train / (tp_rpn_train + fn_rpn_train)
 
 # recall
-
+print(len(record_train))
+print(len(recall_rpn_train,))
 axs[0].plot(    np.arange(0, r_epochs), 
                 recall_rpn_train,
                 label='train set: recall',
