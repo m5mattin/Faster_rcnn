@@ -351,13 +351,13 @@ for epoch_num in range(num_epochs):
             # Y2: corresponding labels and corresponding gt bboxes
             
             X2_train, Y1_train, Y2_train, IouS_train, overlap_others = calc_iou(R_train, img_data_train, C, class_mapping_label)
-            
+
             # Get matches between rpn boxes and real classes (number of pig, number of others, number of neg)
+
             for i in range(len(Y1_train[0])):
-                for j in range(len(class_mapping_label)):
-                    if (Y1_train[:,i,j]) == 1:
-                        rpn_overlaping_train[iter_num,j,epoch_num] = rpn_overlaping_train[iter_num,j,epoch_num] + 1
-            
+                j = np.where(Y1_train[0,i,:]>0)
+                rpn_overlaping_train[iter_num,j,epoch_num] = rpn_overlaping_train[iter_num,j,epoch_num] + 1
+
             # get confusion matrix for rpn boxes 
             tmp_confusion = compare_rpn_to_groundtruth(img_data_train['bboxes'],R_train*C.rpn_stride,num_boxes=300)
             rpn_confusion_matrix_train = rpn_confusion_matrix_train + tmp_confusion
@@ -386,6 +386,8 @@ for epoch_num in range(num_epochs):
             rpn_accuracy_rpn_monitor_train.append(len(pos_samples_train))
             rpn_accuracy_for_epoch_train.append((len(pos_samples_train)))
             X2, Y1, Y2, sel_samples = get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, mode, overlap_others)
+            
+            
             loss_class_train = []
             Y_detection = []
             
@@ -488,9 +490,9 @@ for epoch_num in range(num_epochs):
                                     'class_20':round(class_confusion_matrix_train[2,0], 3),
                                     'class_21':round(class_confusion_matrix_train[2,1], 3) ,
                                     'class_22':round(class_confusion_matrix_train[2,2], 3),
-                                    'rpn_mop':round(rpn_mop),
-                                    'rpn_moo':round(rpn_moo),
-                                    'rpn_mob':round(rpn_mob)
+                                    'rpn_mop':round(rpn_mop, 3),
+                                    'rpn_moo':round(rpn_moo, 3),
+                                    'rpn_mob':round(rpn_mob, 3)
                                     }
 
                 for num_image in range (len(test_imgs)):
@@ -510,12 +512,11 @@ for epoch_num in range(num_epochs):
                     # Y1: one hot code for bboxes from above => x_roi (X)
                     # Y2: corresponding labels and corresponding gt bboxes
                     X2_test, Y1_test, Y2_test, IouS_test, overlap_others = calc_iou(R_test, img_data_test, C, class_mapping_label)
-                    
+
                     for i in range(len(Y1_test[0])):
-                        for j in range(len(class_mapping_label)):
-                            if (Y1_test[:,i,j]) == 1:
-                                rpn_overlaping_test[num_image,j,epoch_num] = rpn_overlaping_test[num_image,j,epoch_num] + 1
-                    
+                        j = np.where(Y1_test[0,i,:]>0)
+                        rpn_overlaping_test[num_image,j,epoch_num] = rpn_overlaping_test[num_image,j,epoch_num] + 1
+
                     tmp_confusion = compare_rpn_to_groundtruth(img_data_test['bboxes'],R_test*C.rpn_stride,num_boxes=300)
                     rpn_confusion_matrix_test = rpn_confusion_matrix_test + tmp_confusion
                     
@@ -589,9 +590,9 @@ for epoch_num in range(num_epochs):
                                             'class_20':round(class_confusion_matrix_test[2,0], 3),
                                             'class_21':round(class_confusion_matrix_test[2,1], 3) ,
                                             'class_22':round(class_confusion_matrix_test[2,2], 3),
-                                            'rpn_mop':round(rpn_mop),
-                                            'rpn_moo':round(rpn_moo),
-                                            'rpn_mob':round(rpn_mob)
+                                            'rpn_mop':round(rpn_mop, 3),
+                                            'rpn_moo':round(rpn_moo, 3),
+                                            'rpn_mob':round(rpn_mob, 3)
                                     }
 
                         record_df_train = record_df_train.append(new_row_train, ignore_index=True)

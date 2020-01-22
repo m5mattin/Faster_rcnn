@@ -16,10 +16,11 @@ record_test = pd.read_csv("../record_test.csv")
 
 r_epochs = len(record_train)
 
-fig, axs = plt.subplots(1, 2)
+fig, axs = plt.subplots(1, 3)
 
 axs[0].set_title('Rpn',color='black')
-axs[1].set_title('Classification',color='black')
+axs[1].set_title('Mean Overlap',color='black')
+axs[2].set_title('Classification',color='black')
 
 ### RPN
 
@@ -32,8 +33,7 @@ fn_rpn_train = record_train['rpn_10']
 recall_rpn_train = tp_rpn_train / (tp_rpn_train + fn_rpn_train)
 
 # recall
-print(len(record_train))
-print(len(recall_rpn_train,))
+
 axs[0].plot(    np.arange(0, r_epochs), 
                 recall_rpn_train,
                 label='train set: recall',
@@ -44,7 +44,7 @@ axs[0].plot(    np.arange(0, r_epochs),
                 label='val set: recall',
                 color=colors['darkred'])
 
-# Loss
+# Loss rpn
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_train['loss_rpn_cls'],
@@ -66,6 +66,29 @@ axs[0].plot(    np.arange(0, r_epochs),
                 label='val set: loss_rpn_regr',
                 color=colors['lime'])
 
+
+# mean overlap 
+
+axs[1].plot(    np.arange(0, r_epochs), 
+                record_train['rpn_mop'],
+                label='train set: mean overlap pig',
+                color=colors['darkblue'])
+
+axs[1].plot(    np.arange(0, r_epochs), 
+                record_train['rpn_moo'],
+                label='train set: mean overlap others',
+                color=colors['royalblue'])
+
+axs[1].plot(    np.arange(0, r_epochs), 
+                record_test['rpn_mop'],
+                label='val set: mean overlap pig',
+                color=colors['darkgreen'])
+
+axs[1].plot(    np.arange(0, r_epochs), 
+                record_test['rpn_moo'],
+                label='val set: mean overlap others',
+                color=colors['lime'])
+
 # Classification
 
 tp_class_train = record_train['class_00']
@@ -81,22 +104,22 @@ tn_class_test = record_test['class_11'] + record_test['class_22'] + record_test[
 acc_class_test = (tp_class_test+tn_class_test)/(tp_class_test+fn_class_test+fp_class_test+tn_class_test)
 
 # loss 
-axs[1].plot(    np.arange(0, r_epochs), 
+axs[2].plot(    np.arange(0, r_epochs), 
                 record_train['loss_class_cls'],
                 label='train set: loss_class_cls',
                 color=colors['darkblue'])
 
-axs[1].plot(    np.arange(0, r_epochs), 
+axs[2].plot(    np.arange(0, r_epochs), 
                 record_train['loss_class_regr'],
                 label='train set: loss_class_regr',
                 color=colors['royalblue'])
 
-axs[1].plot(    np.arange(0, r_epochs), 
+axs[2].plot(    np.arange(0, r_epochs), 
                 record_test['loss_class_cls'],
                 label='val set: loss_class_cls',
                 color=colors['darkgreen'])
 
-axs[1].plot(    np.arange(0, r_epochs), 
+axs[2].plot(    np.arange(0, r_epochs), 
                 record_test['loss_class_regr'],
                 label='val set: loss_class_regr',
                 color=colors['lime'])
@@ -104,17 +127,17 @@ axs[1].plot(    np.arange(0, r_epochs),
 
 # accuracy
 
-axs[1].plot(    np.arange(0, r_epochs), 
+axs[2].plot(    np.arange(0, r_epochs), 
                 acc_class_train,
                 label='train set: class_pig_acc',
                 color=colors['darkorange'])
 
-axs[1].plot(    np.arange(0, r_epochs), 
+axs[2].plot(    np.arange(0, r_epochs), 
                 acc_class_test,
                 label='val set: class_pig_acc',
                 color=colors['darkred'])
 
-for i in range(2):
+for i in range(3):
     axs[i].legend(loc="best")
 
 plt.show()

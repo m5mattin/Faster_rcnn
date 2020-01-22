@@ -1,5 +1,7 @@
 import numpy as np 
 
-a = np.zeros((2, 4))
+a = np.array([0,0,1])
 
-print(a)
+print(a.shape)
+b = np.where(a>0)
+print(b) 
