@@ -15,7 +15,7 @@ Output :- nb images
 import argparse
 import csv
 import os
-from utils import *
+from new_utils import *
 import matplotlib.pyplot as plt
 
 
@@ -154,7 +154,22 @@ list_of_iou = []
 # plt.xlabel("ious")
 # plt.show()
 
+def nms_boxes(boxes):
 
+    lt = len(boxes)
+    cpt = 0
+    while cpt < lt - 1:
+        cpt2 = cpt + 1
+        while cpt2 < lt:
+            curr_iou = iou([boxes[cpt][0], boxes[cpt][1], boxes[cpt][2], boxes[cpt][3]], [boxes[cpt2][0], boxes[cpt2][1], boxes[cpt2][2], boxes[cpt2][3]])
+            if curr_iou >= 0.7:
+                del boxes[cpt2]
+                lt = lt - 1
+            else: 
+                cpt2 = cpt2 + 1
+        cpt = cpt + 1
+    
+    return len(boxes)
 
 anchor_ratios = [[1, 1], [1, 2], [2, 1]]
 anchor_sizes = [100, 175.0, 350.0]
@@ -163,6 +178,10 @@ anchor_sizes = [100, 175.0, 350.0]
 list_of_iou_pig = []
 list_of_iou_others = []
 list_of_iou_neg = []
+
+list_of_iou_pig_anms = []
+list_of_iou_others_anms = []
+
 
 output_width = 80
 output_height = 45
@@ -174,6 +193,8 @@ for i in range(len(train_imgs)):
     nb_iou_pigs = 0
     nb_iou_others = 0
     nb_iou_neg = 0
+    list_of_boxs_pig = []
+    list_of_boxs_others = []
     
     for anchor_size_idx in range(len(anchor_sizes)):
             for anchor_ratio_idx in range(len(anchor_ratios)):
@@ -215,24 +236,39 @@ for i in range(len(train_imgs)):
                                 best_iou_for_anchor = curr_iou
                                 best_class_for_anchor = train_imgs[i]['bboxes'][bbox_num]['class']
                         
-                        if best_iou_for_anchor > 0.65:
+                        if best_iou_for_anchor > 0.5:
                             if best_class_for_anchor == 'pig':
                                 nb_iou_pigs = nb_iou_pigs + 1
+                                list_of_boxs_pig.append((x1_anc,y1_anc,x2_anc,y2_anc))
                             if best_class_for_anchor == 'others':
                                 nb_iou_others = nb_iou_others + 1
+                                list_of_boxs_others.append((x1_anc,y1_anc,x2_anc,y2_anc))
                         else:
                             nb_iou_neg = nb_iou_neg + 1
+                        
+
     if nb_iou_pigs > 0 or nb_iou_pigs == 0:
-        print(i, train_imgs[i]['filepath'],nb_iou_pigs)
+        print(i, train_imgs[i]['filepath'],nb_iou_pigs,nms_boxes(list_of_boxs_pig))
+
+
+    list_of_iou_pig_anms.append(nms_boxes(list_of_boxs_pig))
+    list_of_iou_others_anms.append(nms_boxes(list_of_boxs_others))
 
     list_of_iou_pig.append(nb_iou_pigs)
     list_of_iou_others.append(nb_iou_others)
     list_of_iou_neg.append(nb_iou_neg)
 
+### To do : add nms 0.7
+
 # iou rpn
 print(list_of_iou_pig)
-print(list_of_iou_others)
-print(list_of_iou_neg)
+print("mean pig : ",sum(list_of_iou_pig)/len(train_imgs))
+print("mean others : ",sum(list_of_iou_others)/len(train_imgs))
+print("mean neg : ",sum(list_of_iou_neg)/len(train_imgs))
+
+print("mean pig anms: ",sum(list_of_iou_pig_anms)/len(train_imgs))
+print("mean others anms : ",sum(list_of_iou_others_anms)/len(train_imgs))
+
 #plt.hist(list_of_iou_pig,bins=100,color=('purple'))
 plt.hist(list_of_iou_others,bins=100,color=('purple'))
 plt.show()

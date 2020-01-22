@@ -301,7 +301,7 @@ rpn_accuracy_rpn_monitor_test = []
 rpn_accuracy_for_epoch_test = []
 
 rpn_overlaping_train = np.zeros((epoch_length,3,num_epochs))
-rpn_overlaping_test = np.zeros((epoch_length,3,num_epochs))
+rpn_overlaping_test = np.zeros((imagestest_length,3,num_epochs))
 
 best_loss_train = np.Inf
 
@@ -516,7 +516,7 @@ for epoch_num in range(num_epochs):
                     for i in range(len(Y1_test[0])):
                         j = np.where(Y1_test[0,i,:]>0)
                         rpn_overlaping_test[num_image,j,epoch_num] = rpn_overlaping_test[num_image,j,epoch_num] + 1
-
+                    
                     tmp_confusion = compare_rpn_to_groundtruth(img_data_test['bboxes'],R_test*C.rpn_stride,num_boxes=300)
                     rpn_confusion_matrix_test = rpn_confusion_matrix_test + tmp_confusion
                     

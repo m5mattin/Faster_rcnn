@@ -37,12 +37,13 @@ recall_rpn_train = tp_rpn_train / (tp_rpn_train + fn_rpn_train)
 axs[0].plot(    np.arange(0, r_epochs), 
                 recall_rpn_train,
                 label='train set: recall',
-                color=colors['darkorange'])
+                color=colors['darkred'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 recall_rpn_test,
                 label='val set: recall',
-                color=colors['darkred'])
+                color=colors['darkred'],
+                linestyle=":")
 
 # Loss rpn
 
@@ -54,17 +55,19 @@ axs[0].plot(    np.arange(0, r_epochs),
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_train['loss_rpn_regr'],
                 label='train set: loss_rpn_regr',
-                color=colors['royalblue'])
+                color=colors['darkgreen'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_test['loss_rpn_cls'],
                 label='val set: loss_rpn_cls',
-                color=colors['darkgreen'])
+                color=colors['darkblue'],
+                linestyle=":")
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_test['loss_rpn_regr'],
                 label='val set: loss_rpn_regr',
-                color=colors['lime'])
+                color=colors['darkgreen'],
+                linestyle=":")
 
 
 # mean overlap 
@@ -72,22 +75,24 @@ axs[0].plot(    np.arange(0, r_epochs),
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_train['rpn_mop'],
                 label='train set: mean overlap pig',
-                color=colors['darkblue'])
+                color=colors['darkgreen'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
                 record_train['rpn_moo'],
                 label='train set: mean overlap others',
-                color=colors['royalblue'])
+                color=colors['darkorange'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
-                record_test['rpn_mop'],
+                record_test['rpn_mop']*2.18,
                 label='val set: mean overlap pig',
-                color=colors['darkgreen'])
+                color=colors['darkgreen'],
+                linestyle=":")
 
 axs[1].plot(    np.arange(0, r_epochs), 
-                record_test['rpn_moo'],
+                record_test['rpn_moo']*2.18,
                 label='val set: mean overlap others',
-                color=colors['lime'])
+                color=colors['darkorange'],
+                linestyle=":")
 
 # Classification
 
@@ -112,30 +117,32 @@ axs[2].plot(    np.arange(0, r_epochs),
 axs[2].plot(    np.arange(0, r_epochs), 
                 record_train['loss_class_regr'],
                 label='train set: loss_class_regr',
-                color=colors['royalblue'])
-
-axs[2].plot(    np.arange(0, r_epochs), 
-                record_test['loss_class_cls'],
-                label='val set: loss_class_cls',
                 color=colors['darkgreen'])
-
-axs[2].plot(    np.arange(0, r_epochs), 
-                record_test['loss_class_regr'],
-                label='val set: loss_class_regr',
-                color=colors['lime'])
-
-
-# accuracy
 
 axs[2].plot(    np.arange(0, r_epochs), 
                 acc_class_train,
                 label='train set: class_pig_acc',
-                color=colors['darkorange'])
+                color=colors['darkred'])
+
+axs[2].plot(    np.arange(0, r_epochs), 
+                record_test['loss_class_cls'],
+                label='val set: loss_class_cls',
+                color=colors['royalblue'],
+                linestyle=':')
+
+axs[2].plot(    np.arange(0, r_epochs), 
+                record_test['loss_class_regr'],
+                label='val set: loss_class_regr',
+                color=colors['darkgreen'],
+                linestyle=':')
 
 axs[2].plot(    np.arange(0, r_epochs), 
                 acc_class_test,
                 label='val set: class_pig_acc',
-                color=colors['darkred'])
+                color=colors['darkred'],
+                linestyle=':')
+
+
 
 for i in range(3):
     axs[i].legend(loc="best")
