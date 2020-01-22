@@ -188,7 +188,7 @@ output_height = 45
 
 
 scale = 16
-
+cnt = 0
 for i in range(len(train_imgs)):
     nb_iou_pigs = 0
     nb_iou_others = 0
@@ -223,7 +223,7 @@ for i in range(len(train_imgs)):
 
                         best_iou_for_anchor = 0.0
                         best_class_for_anchor = 'none'
-                        
+                        cnt = cnt + 1
                         for bbox_num in range (len(train_imgs[i]['bboxes'])):
                             x1_box = train_imgs[i]['bboxes'][bbox_num]['x1']
                             x2_box = train_imgs[i]['bboxes'][bbox_num]['x2']
@@ -261,7 +261,7 @@ for i in range(len(train_imgs)):
 ### To do : add nms 0.7
 
 # iou rpn
-print(list_of_iou_pig)
+print("nb anchors : ",cnt)
 print("mean pig : ",sum(list_of_iou_pig)/len(train_imgs))
 print("mean others : ",sum(list_of_iou_others)/len(train_imgs))
 print("mean neg : ",sum(list_of_iou_neg)/len(train_imgs))

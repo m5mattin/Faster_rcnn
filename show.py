@@ -83,13 +83,13 @@ axs[1].plot(    np.arange(0, r_epochs),
                 color=colors['darkorange'])
 
 axs[1].plot(    np.arange(0, r_epochs), 
-                record_test['rpn_mop']*2.18,
+                record_test['rpn_mop'],
                 label='val set: mean overlap pig',
                 color=colors['darkgreen'],
                 linestyle=":")
 
 axs[1].plot(    np.arange(0, r_epochs), 
-                record_test['rpn_moo']*2.18,
+                record_test['rpn_moo'],
                 label='val set: mean overlap others',
                 color=colors['darkorange'],
                 linestyle=":")
