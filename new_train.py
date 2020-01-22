@@ -466,9 +466,9 @@ for epoch_num in range(num_epochs):
 #                     # with open("checkpoint/checkpoint.csv", "w") as csv_file:
 #                     #     csv_file.write("epoch:{}, best_loss:{} \n".format(len(record_df_train),best_loss_train))
 
-#                 # Save weight from the current model 
-#                 # checkpoint_path = "../checkpoint/model_frcnn_vgg_epoch"+ str(len(record_df_train))+".hdf5"
-#                 # model_all.save_weights(checkpoint_path)
+                #Save weight from the current model 
+                checkpoint_path = "../checkpoint/model_frcnn_vgg_epoch" + mode + str(len(record_df_train))+".hdf5"
+                model_all.save_weights(checkpoint_path)
                 
                 new_row_train = {   'loss_rpn_cls':round(loss_rpn_cls_train, 3), 
                                     'loss_rpn_regr':round(loss_rpn_regr_train, 3), 
