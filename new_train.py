@@ -528,19 +528,23 @@ for epoch_num in range(num_epochs):
 
                     X2, Y1, Y2, sel_samples = get_training_batch_classifier(C, X2_test, Y1_test, Y2_test, IouS_test, mode, overlap_others)
                     loss_class_test = model_classifier.test_on_batch([X_test, X2], [Y1, Y2])
-                    [P_cls, P_regr] = model_classifier.predict([X_test, X2])
+                    
+                    for k in range(int(len(Y1_test[0])//C.num_rois)):
+                        
+                        X2, Y1, Y2, sel_samples = get_testing_batch_classifier(C, X2_test, Y1_test, Y2_test, mode, k)
+                        [P_cls, P_regr] = model_classifier.predict([X_test, X2])
 
-                    for i in range (len(sel_samples)):
-                        class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
-                        class_predicted = int(class_predicted[0])
-                        class_gt = np.where(Y1_test[0, sel_samples[i], :]== np.amax(Y1_test[0, sel_samples[i], :]))
-                        class_gt = int(class_gt[0])
+                        for i in range (len(sel_samples)):
+                            class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
+                            class_predicted = int(class_predicted[0])
+                            class_gt = np.where(Y1_test[0, sel_samples[i], :]== np.amax(Y1_test[0, sel_samples[i], :]))
+                            class_gt = int(class_gt[0])
 
-                        if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
-                            if class_predicted == len(class_mapping) - 1:
-                                class_predicted = class_predicted + 1
+                            if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
+                                if class_predicted == len(class_mapping) - 1:
+                                    class_predicted = class_predicted + 1
 
-                        class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
+                            class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
                     
                     #print(class_confusion_matrix_test)
                     # Loss rpn  
