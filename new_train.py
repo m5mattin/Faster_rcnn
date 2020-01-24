@@ -409,9 +409,6 @@ for epoch_num in range(num_epochs):
                     if class_predicted == len(class_mapping) - 1:
                         class_predicted = class_predicted + 1
 
-                # print(class_predicted,P_cls[0][i])
-                # print(class_gt,Y1_train[0, sel_samples[i], :])
-
                 class_confusion_matrix_train[class_predicted, class_gt] = class_confusion_matrix_train[class_predicted, class_gt] + 1
             # Save boxes with (boxe, cls, regr)
             #Y_detection.append( (X2_train[:, sel_samples_train[i], :][0], P_cls[0][i], P_regr[0][i]))
@@ -528,24 +525,22 @@ for epoch_num in range(num_epochs):
                     
                     loss_class_test = []
                     
-                    for k in range(int(len(Y1_test[0])//C.num_rois)):
-                        X2, Y1, Y2, sel_samples = get_testing_batch_classifier(C, X2_test, Y1_test, Y2_test, mode, k)
-                        loss = model_classifier.test_on_batch([X_test, X2], [Y1, Y2])
-                        loss_class_test.append(loss)
-                        [P_cls, P_regr] = model_classifier.predict([X_test, X2])
 
-                        for i in range (len(sel_samples)):
-                            #print(Y1_test[0, sel_samples[i], :],P_cls[0][i])
-                            class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
-                            class_predicted = int(class_predicted[0])
+                    X2, Y1, Y2, sel_samples = get_training_batch_classifier(C, X2_test, Y1_test, Y2_test, IouS_test, mode, overlap_others)
+                    loss_class_test = model_classifier.test_on_batch([X_test, X2], [Y1, Y2])
+                    [P_cls, P_regr] = model_classifier.predict([X_test, X2])
 
-                            if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
-                                if class_predicted == len(class_mapping) - 1:
-                                    class_predicted = class_predicted + 1
+                    for i in range (len(sel_samples)):
+                        class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
+                        class_predicted = int(class_predicted[0])
+                        class_gt = np.where(Y1_test[0, sel_samples[i], :]== np.amax(Y1_test[0, sel_samples[i], :]))
+                        class_gt = int(class_gt[0])
 
-                            class_gt = np.where(Y1_test[0, sel_samples[i], :]== np.amax(Y1_test[0, sel_samples[i], :]))
-                            class_gt = int(class_gt[0])
-                            class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
+                        if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
+                            if class_predicted == len(class_mapping) - 1:
+                                class_predicted = class_predicted + 1
+
+                        class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
                     
                     #print(class_confusion_matrix_test)
                     # Loss rpn  
@@ -553,9 +548,8 @@ for epoch_num in range(num_epochs):
                     losses_test[num_image, 1] = loss_rpn_test[2]
                     
                     # Loss classification
-                    loss_class_test = np.asarray(loss_class_test)
-                    losses_test[num_image, 2] = np.mean(loss_class_test[:,1])
-                    losses_test[num_image, 3] = np.mean(loss_class_test[:,2])
+                    losses_test[num_image, 2] = loss_class_test[1]
+                    losses_test[num_image, 3] = loss_class_test[2]
 
                     if num_image == (len(test_imgs)-1):
                         

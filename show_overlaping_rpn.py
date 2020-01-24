@@ -6,7 +6,7 @@ colors = dict(mcolors.BASE_COLORS, **mcolors.CSS4_COLORS)
 
 train = np.load('../overlaping_rpn_train.npy')
 test = np.load('../overlaping_rpn_test.npy')
-epoch_num = 10
+epoch_num = 15
 fig, axs = plt.subplots(1, 3)
 
 axs[0].set_title('Overlap Pig',color='black')
