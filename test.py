@@ -1,49 +1,53 @@
-from matplotlib import pyplot as plt
-import numpy as np
-from matplotlib import colors as mcolors
+import numpy as np 
 
-colors = dict(mcolors.BASE_COLORS, **mcolors.CSS4_COLORS)
+gt = ["a","b","c","z"]
+d = ["b","f","c","b","k","a","a"]
 
-train = np.load('../overlaping_rpn_train.npy')
-test = np.load('../overlaping_rpn_test.npy')
-epoch_num = 15
-fig, axs = plt.subplots(1, 2)
+PR = np.zeros((len(d), 4))
 
-axs[0].set_title('Overlap Pig',color='black')
-axs[1].set_title('Overlap Negative',color='black')
+nb_gt = len(gt)
 
-cols = ['b', 'g', 'r', 'c', 'm', 'y'];
+Tp = 0
+Fp = 0
+Fn = 0
 
-print(np.mean(train[:,0,epoch_num]))
-for i in range(1):
+cnt = 0
+Precision_inter = 0
 
-    axs[0].plot(   np.arange(0,train.shape[0]),
-                    train[:,0,epoch_num],
-                    label='epoch {}'.format(epoch_num),
-                    color='g')
+for i in range (len(d)):
+    cnt = cnt + 1
+    for j in range(len(gt)):
+        if d[i] == gt[j]:
+            Tp = Tp + 1
+            PR[i][0] = 1
+            Precision_inter = Tp / cnt
+            del gt[j]
+            break
+        
+    PR[i][1] = Tp / cnt
+    PR[i][2] = Tp / (nb_gt + 1e-16)
+    PR[i][3] = Precision_inter
+
+tab = PR
+
+tab_final = np.zeros(11)
+max_p = 0
+seuil = 0
+print(tab)
+for i in range(len(tab)):
+    if (max_p < tab[i][3]):
+        max_p = tab[i][3]
+    max_tmp = max_p
+    print("max_tmp: ",max_tmp)
     
-    axs[1].plot(   np.arange(0,train.shape[0]),
-                    train[:,2,epoch_num],
-                    label='epoch {}'.format(epoch_num),
-                    color='r')
-
-for i in range(2):
-    axs[i].legend(loc="best")
-    axs[i].set_xlabel("training image")
-    axs[i].set_ylabel("nb boxes overlaping")
-
-plt.show()
-
-# print(train.shape)
-# bar_width = 1
-# opacity = 1
-
-# rect3 = plt.bar(np.arange(0,train.shape[0]), train[:,2,epoch_num], bar_width,  color = "r", alpha=opacity)
-
-# rect1 = plt.bar(np.arange(0,train.shape[0]), train[:,1,epoch_num], bar_width, color = "y", alpha=opacity,bottom=train[:,2,epoch_num])
-
-# rect2 = plt.bar(np.arange(0,train.shape[0]), train[:,0,epoch_num], bar_width, color = "g", alpha=opacity,bottom=train[:,2,epoch_num]+train[:,1,epoch_num])
+    while(seuil <= tab[i][2]):
+        print("seuil:",seuil)
+        tab_final[int(seuil*10)] = max_tmp
+        max_p = 0
+        seuil = seuil + 0.1
 
 
-# plt.tight_layout()
-# plt.show()
+
+
+
+print(tab_final)

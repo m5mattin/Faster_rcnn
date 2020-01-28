@@ -342,16 +342,16 @@ for epoch_num in range(num_epochs):
             loss_rpn_train = model_rpn.train_on_batch(X_train, Y_train)
             # Get predicted rpn from rpn model [rpn_cls, rpn_regr]
             P_rpn_train = model_rpn.predict_on_batch(X_train)
-
+            
             # Convert rpn layer to roi bboxes
-            R_train = rpn_to_roi(P_rpn_train[0], P_rpn_train[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)
+            R_train, probs = rpn_to_roi(P_rpn_train[0], P_rpn_train[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)
             # note: calc_iou converts from (x1,y1,x2,y2) to (x,y,w,h) format
             # X2: bboxes that iou > C.classifier_min_overlap for all gt bboxes in 300 non_max_suppression bboxes
             # Y1: one hot code for bboxes from above => x_roi (X)
             # Y2: corresponding labels and corresponding gt bboxes
             
             X2_train, Y1_train, Y2_train, IouS_train, overlap_others = calc_iou(R_train, img_data_train, C, class_mapping_label)
-
+            
             # Get matches between rpn boxes and real classes (number of pig, number of others, number of neg)
 
             for i in range(len(Y1_train[0])):
@@ -385,34 +385,40 @@ for epoch_num in range(num_epochs):
 
             rpn_accuracy_rpn_monitor_train.append(len(pos_samples_train))
             rpn_accuracy_for_epoch_train.append((len(pos_samples_train)))
+            
+            
             X2, Y1, Y2, sel_samples = get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, mode, overlap_others)
-            
-            
-            loss_class_train = []
-            Y_detection = []
+            loss_class_train = model_classifier.train_on_batch([X_train, X2], [Y1, Y2]) 
+            Y_detection_train = []
             
             #  X  => img_data resized image
             #  X2 => num_rois (4 in here) bboxes which contains selected neg and pos
             #  Y1 => one hot encode for num_rois bboxes which contains selected neg and pos
             #  Y2 => labels and gt bboxes for num_rois bboxes which contains selected neg and pos
 
-            loss_class_train = model_classifier.train_on_batch([X_train, X2], [Y1, Y2])
-            [P_cls, P_regr] = model_classifier.predict([X_train, X2])
+            for k in range(int(len(Y1_train[0])//C.num_rois)):
+                
+                X2, Y1, Y2, sel_samples = get_testing_batch_classifier(C, X2_train, Y1_train, Y2_train, mode, k)
+                [P_cls, P_regr] = model_classifier.predict([X_train, X2])
 
-            for i in range (len(sel_samples)):
-                class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
-                class_predicted = int(class_predicted[0])
-                class_gt = np.where(Y1_train[0, sel_samples[i], :]== np.amax(Y1_train[0, sel_samples[i], :]))
-                class_gt = int(class_gt[0])
+                for i in range (len(sel_samples)):
+                    class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
+                    class_predicted = int(class_predicted[0])
+                    class_gt = np.where(Y1_train[0, sel_samples[i], :]== np.amax(Y1_train[0, sel_samples[i], :]))
+                    class_gt = int(class_gt[0])
 
-                if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
-                    if class_predicted == len(class_mapping) - 1:
-                        class_predicted = class_predicted + 1
+                    if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
+                        if class_predicted == len(class_mapping) - 1:
+                            class_predicted = class_predicted + 1
 
-                class_confusion_matrix_train[class_predicted, class_gt] = class_confusion_matrix_train[class_predicted, class_gt] + 1
+                    class_confusion_matrix_train[class_predicted, class_gt] = class_confusion_matrix_train[class_predicted, class_gt] + 1
             # Save boxes with (boxe, cls, regr)
-            #Y_detection.append( (X2_train[:, sel_samples_train[i], :][0], P_cls[0][i], P_regr[0][i]))
-            #all_dets = get_detections_boxes(Y_detection,C,class_mapping)
+                    Y_detection_train.append( (X2_train[:, sel_samples[i], :][0], P_cls[0][i], P_regr[0][i]))
+            
+            all_dets = get_detections_boxes(Y_detection_train, C, class_mapping)
+            ap_train = get_average_precision(all_dets,img_data_train['bboxes'])
+
+
             #detection_confusion_matrix = compare_detection_to_groundtruth(img_dataf_label['bboxes'], all_dets)
 
             # Loss rpn  
@@ -424,7 +430,6 @@ for epoch_num in range(num_epochs):
             losses_train[iter_num, 3] = loss_class_train[2]
 
             iter_num += 1
-
             progbar_train.update(iter_num, [('rpn_cls', np.mean(losses_train[:iter_num, 0])), ('rpn_regr', np.mean(losses_train[:iter_num, 1])),
                                       ('final_cls', np.mean(losses_train[:iter_num, 2])), ('final_regr', np.mean(losses_train[:iter_num, 3]))])
                             
@@ -523,12 +528,11 @@ for epoch_num in range(num_epochs):
                         rpn_accuracy_for_epoch_test.append(0)
                         continue
                     
-                    loss_class_test = []
-                    
 
                     X2, Y1, Y2, sel_samples = get_training_batch_classifier(C, X2_test, Y1_test, Y2_test, IouS_test, mode, overlap_others)
                     loss_class_test = model_classifier.test_on_batch([X_test, X2], [Y1, Y2])
-                    
+                    Y_detection_test = []
+
                     for k in range(int(len(Y1_test[0])//C.num_rois)):
                         
                         X2, Y1, Y2, sel_samples = get_testing_batch_classifier(C, X2_test, Y1_test, Y2_test, mode, k)
