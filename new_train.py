@@ -344,6 +344,7 @@ for epoch_num in range(num_epochs):
             P_rpn_train = model_rpn.predict_on_batch(X_train)
             
             # Convert rpn layer to roi bboxes
+
             R_train, probs = rpn_to_roi(P_rpn_train[0], P_rpn_train[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)
             # note: calc_iou converts from (x1,y1,x2,y2) to (x,y,w,h) format
             # X2: bboxes that iou > C.classifier_min_overlap for all gt bboxes in 300 non_max_suppression bboxes
@@ -385,7 +386,7 @@ for epoch_num in range(num_epochs):
 
             rpn_accuracy_rpn_monitor_train.append(len(pos_samples_train))
             rpn_accuracy_for_epoch_train.append((len(pos_samples_train)))
-            
+         
             
             X2, Y1, Y2, sel_samples = get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, mode, overlap_others)
             loss_class_train = model_classifier.train_on_batch([X_train, X2], [Y1, Y2]) 
@@ -414,7 +415,7 @@ for epoch_num in range(num_epochs):
                     class_confusion_matrix_train[class_predicted, class_gt] = class_confusion_matrix_train[class_predicted, class_gt] + 1
             # Save boxes with (boxe, cls, regr)
                     Y_detection_train.append( (X2_train[:, sel_samples[i], :][0], P_cls[0][i], P_regr[0][i]))
-            
+         
             # all_dets = get_detections_boxes(Y_detection_train, C, class_mapping)
             # ap_train = get_average_precision(all_dets,img_data_train['bboxes'])
 
@@ -497,42 +498,37 @@ for epoch_num in range(num_epochs):
                                     'rpn_mob':round(rpn_mob, 3)
                                     }
 
-                for num_image in range (len(test_imgs)):
+                for num_image in range (len(test_imgs)):  
                     print("epoch {}, test image {}/{} processed".format(epoch_num, num_image+1,len(test_imgs)))
                     # Generate X (x_img) and label Y ([y_rpn_cls, y_rpn_regr])
                     X_test, Y_test, img_data_test, debug_img_test, debug_num_pos_test = next(data_gen_test)
-                    # Train rpn model and get loss value [_, loss_rpn_cls, loss_rpn_regr]
-
+                    # Train rpn model and get loss value [_, loss_rpn_cls, loss_rpn_regr] 
                     loss_rpn_test = model_rpn.test_on_batch(X_test, Y_test)
                     # Get predicted rpn from rpn model [rpn_cls, rpn_regr]
                     P_rpn_test = model_rpn.predict_on_batch(X_test)
                     # R: bboxes (shape=(300,4))
                     # Convert rpn layer to roi bboxes
-                    R_test = rpn_to_roi(P_rpn_test[0], P_rpn_test[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)                     
+                    R_test,probs = rpn_to_roi(P_rpn_test[0], P_rpn_test[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)                     
                     # note: calc_iou converts from (x1,y1,x2,y2) to (x,y,w,h) format
                     # X2: bboxes that iou > C.classifier_min_overlap for all gt bboxes in 300 non_max_suppression bboxes
                     # Y1: one hot code for bboxes from above => x_roi (X)
                     # Y2: corresponding labels and corresponding gt bboxes
+                    print(R_test)
                     X2_test, Y1_test, Y2_test, IouS_test, overlap_others = calc_iou(R_test, img_data_test, C, class_mapping_label)
-
                     for i in range(len(Y1_test[0])):
                         j = np.where(Y1_test[0,i,:]>0)
                         rpn_overlaping_test[num_image,j,epoch_num] = rpn_overlaping_test[num_image,j,epoch_num] + 1
-                    
                     tmp_confusion = compare_rpn_to_groundtruth(img_data_test['bboxes'],R_test*C.rpn_stride,num_boxes=300)
                     rpn_confusion_matrix_test = rpn_confusion_matrix_test + tmp_confusion
-                    
                     # If X2 is None means there are no matching bboxes
                     if X2_test is None:
                         rpn_accuracy_rpn_monitor_test.append(0)
                         rpn_accuracy_for_epoch_test.append(0)
                         continue
                     
-
                     X2, Y1, Y2, sel_samples = get_training_batch_classifier(C, X2_test, Y1_test, Y2_test, IouS_test, mode, overlap_others)
                     loss_class_test = model_classifier.test_on_batch([X_test, X2], [Y1, Y2])
-                    Y_detection_test = []
-
+                    Y_detection_test = [] 
                     for k in range(int(len(Y1_test[0])//C.num_rois)):
                         
                         X2, Y1, Y2, sel_samples = get_testing_batch_classifier(C, X2_test, Y1_test, Y2_test, mode, k)

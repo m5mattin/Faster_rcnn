@@ -1,6 +1,13 @@
 import numpy as np 
 
+# gt = ["a","b","c","z"]
+# d = ["b","f","c","b","k","a","a"]
+
 gt = ["a","b","c","z"]
+d = ["b","f","c","b","k","a","a"]
+
+
+gt = ["a","b","c"]
 d = ["b","f","c","b","k","a","a"]
 
 PR = np.zeros((len(d), 4))
@@ -28,26 +35,35 @@ for i in range (len(d)):
     PR[i][2] = Tp / (nb_gt + 1e-16)
     PR[i][3] = Precision_inter
 
-tab = PR
+
+recall = 0
+tab = []
+for i in range(len(PR)):
+    if PR[i][2] > recall:
+        tab.append((PR[i][0],PR[i][1],PR[i][2],PR[i][3]))
+        recall = PR[i][2]
 
 tab_final = np.zeros(11)
 max_p = 0
+
+print(PR)
+print("  ")
+print(np.asarray(tab))
+
+
+tab = PR
 seuil = 0
-print(tab)
 for i in range(len(tab)):
     if (max_p < tab[i][3]):
         max_p = tab[i][3]
     max_tmp = max_p
-    print("max_tmp: ",max_tmp)
     
-    while(seuil <= tab[i][2]):
-        print("seuil:",seuil)
-        tab_final[int(seuil*10)] = max_tmp
+    while(seuil/10 <= tab[i][2]):
+        tab_final[seuil] = max_tmp
         max_p = 0
-        seuil = seuil + 0.1
+        seuil = seuil + 1
 
 
-
-
-
+print("  ")
 print(tab_final)
+print(sum(tab_final)/len(tab_final))
