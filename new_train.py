@@ -263,7 +263,7 @@ if True:
                                                 'class_00', 'class_01', 'class_02',
                                                 'class_10', 'class_11', 'class_12',
                                                 'class_20', 'class_21', 'class_22',
-                                                'curr_loss','rpn_mop','rpn_moo','rpn_mob'])
+                                                'curr_loss','rpn_mop','rpn_moo','rpn_mob','ap50','ap75'])
 
     record_df_test = pd.DataFrame(columns=[    'loss_rpn_cls', 'loss_rpn_regr', 
                                                 'rpn_00', 'rpn_01' , 'rpn_02',
@@ -272,7 +272,7 @@ if True:
                                                 'class_00', 'class_01', 'class_02',
                                                 'class_10', 'class_11', 'class_12',
                                                 'class_20', 'class_21', 'class_22',
-                                                'curr_loss','rpn_mop','rpn_moo','rpn_mob'])
+                                                'curr_loss','rpn_mop','rpn_moo','rpn_mob','ap50','ap75'])
 
 optimizer = Adam(lr=1e-5)
 optimizer_classifier = Adam(lr=1e-5)
@@ -416,8 +416,10 @@ for epoch_num in range(num_epochs):
             # Save boxes with (boxe, cls, regr)
                     Y_detection_train.append( (X2_train[:, sel_samples[i], :][0], P_cls[0][i], P_regr[0][i]))
          
-            # all_dets = get_detections_boxes(Y_detection_train, C, class_mapping)
-            # ap_train = get_average_precision(all_dets,img_data_train['bboxes'])
+            all_dets = get_detections_boxes(Y_detection_train, C, class_mapping)
+            
+            ap_train50 = get_average_precision(all_dets,img_data_train['bboxes'],0.50)
+            ap_train75 = get_average_precision(all_dets,img_data_train['bboxes'],0.75)
 
 
             #detection_confusion_matrix = compare_detection_to_groundtruth(img_dataf_label['bboxes'], all_dets)
@@ -495,7 +497,9 @@ for epoch_num in range(num_epochs):
                                     'class_22':round(class_confusion_matrix_train[2,2], 3),
                                     'rpn_mop':round(rpn_mop, 3),
                                     'rpn_moo':round(rpn_moo, 3),
-                                    'rpn_mob':round(rpn_mob, 3)
+                                    'rpn_mob':round(rpn_mob, 3),
+                                    'ap50':round(ap_train50,3),
+                                    'ap75':round(ap_train75,3)
                                     }
 
                 for num_image in range (len(test_imgs)):  
@@ -513,7 +517,6 @@ for epoch_num in range(num_epochs):
                     # X2: bboxes that iou > C.classifier_min_overlap for all gt bboxes in 300 non_max_suppression bboxes
                     # Y1: one hot code for bboxes from above => x_roi (X)
                     # Y2: corresponding labels and corresponding gt bboxes
-                    print(R_test)
                     X2_test, Y1_test, Y2_test, IouS_test, overlap_others = calc_iou(R_test, img_data_test, C, class_mapping_label)
                     for i in range(len(Y1_test[0])):
                         j = np.where(Y1_test[0,i,:]>0)
@@ -545,7 +548,12 @@ for epoch_num in range(num_epochs):
                                     class_predicted = class_predicted + 1
 
                             class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
+                            Y_detection_test.append( (X2_test[:, sel_samples[i], :][0], P_cls[0][i], P_regr[0][i]))
+         
+                    all_dets = get_detections_boxes(Y_detection_test, C, class_mapping)
                     
+                    ap_test50 = get_average_precision(all_dets,img_data_test['bboxes'],0.50)
+                    ap_test75 = get_average_precision(all_dets,img_data_test['bboxes'],0.75)
                     #print(class_confusion_matrix_test)
                     # Loss rpn  
                     losses_test[num_image, 0] = loss_rpn_test[1]
@@ -590,7 +598,9 @@ for epoch_num in range(num_epochs):
                                             'class_22':round(class_confusion_matrix_test[2,2], 3),
                                             'rpn_mop':round(rpn_mop, 3),
                                             'rpn_moo':round(rpn_moo, 3),
-                                            'rpn_mob':round(rpn_mob, 3)
+                                            'rpn_mob':round(rpn_mob, 3),
+                                            'ap50':round(ap_test50, 3),
+                                            'ap75':round(ap_test75, 3)
                                     }
 
                         record_df_train = record_df_train.append(new_row_train, ignore_index=True)

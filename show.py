@@ -16,11 +16,12 @@ record_test = pd.read_csv("../record_test.csv")
 
 r_epochs = len(record_train)
 
-fig, axs = plt.subplots(1, 3)
+fig, axs = plt.subplots(1, 4)
 
 axs[0].set_title('Rpn',color='black')
 axs[1].set_title('Mean Overlap',color='black')
 axs[2].set_title('Classification',color='black')
+axs[2].set_title('Detection',color='black')
 
 ### RPN
 
@@ -142,9 +143,43 @@ axs[2].plot(    np.arange(0, r_epochs),
                 color=colors['darkred'],
                 linestyle=':')
 
+#Detection
+
+axs[3].plot(    np.arange(0, r_epochs), 
+                record_train['curr_loss'],
+                label='train set: curr_loss',
+                color=colors['darkblue'])
+
+axs[3].plot(    np.arange(0, r_epochs), 
+                record_test['curr_loss'],
+                label='test set: curr_loss',
+                color=colors['darkblue'],
+                linestyle=':')
+
+axs[3].plot(    np.arange(0, r_epochs), 
+                record_train['ap50'],
+                label='train set: ap50',
+                color=colors['darkgreen'])
+
+axs[3].plot(    np.arange(0, r_epochs), 
+                record_test['ap50'],
+                label='test set: ap50',
+                color=colors['darkgreen'],
+                linestyle=':')
+
+axs[3].plot(    np.arange(0, r_epochs), 
+                record_train['ap75'],
+                label='train set: ap75',
+                color=colors['darkred'])
+
+axs[3].plot(    np.arange(0, r_epochs), 
+                record_test['ap75'],
+                label='test set: ap75',
+                color=colors['darkred'],
+                linestyle=':')
 
 
-for i in range(3):
+for i in range(4):
     axs[i].legend(loc="best")
 
 plt.show()

@@ -1913,7 +1913,7 @@ def get_detections_boxes(Y, C, class_mapping):
         bboxes.append( ( [x1,y1,x2,y2], cls_name, Y[i][1][np.argmax(Y[i][1])] ) )
     return bboxes
 
-def get_average_precision(all_det,groundtruth_boxes):
+def get_average_precision(all_det,groundtruth_boxes,iou_min):
     
     gt_boxes = []
     
@@ -1936,7 +1936,7 @@ def get_average_precision(all_det,groundtruth_boxes):
         cnt = cnt + 1
         for j in range(len(gt_boxes)):
             cur_iou = iou(gt_boxes[j],all_det[i][0])
-            if cur_iou >= 0.5:
+            if cur_iou >= iou_min:
                 Tp = Tp + 1
                 PR[i][0] = 1
                 Precision_inter = Tp / cnt
@@ -1947,8 +1947,37 @@ def get_average_precision(all_det,groundtruth_boxes):
         PR[i][2] = Tp / (nb_gt + 1e-16)
         PR[i][3] = Precision_inter
 
-        print(cnt,Tp,PR[i][1],PR[i][2],PR[i][3])
-    return 0
+    recall = 0
+    tab = []
+    for i in range(len(PR)):
+        if PR[i][2] > recall:
+            tab.append((PR[i][0],PR[i][1],PR[i][2],PR[i][3]))
+            recall = PR[i][2]
+
+    tab_final = np.zeros(11)
+    max_p = 0
+
+    # print(PR)
+    # print("  ")
+    # print(np.asarray(tab))
+
+    seuil = 0
+    for i in range(len(tab)):
+        if (max_p < tab[i][3]):
+            max_p = tab[i][3]
+        max_tmp = max_p
+        
+        while(seuil/10 <= tab[i][2]):
+            tab_final[seuil] = max_tmp
+            max_p = 0
+            seuil = seuil + 1
+
+
+    # print("  ")
+    # print(tab_final)
+    ap = sum(tab_final)/len(tab_final)
+    # print(ap)
+    return ap
 
 
 def show_rpn_on_image(img,g_boxes,d_boxes,num_boxes):
