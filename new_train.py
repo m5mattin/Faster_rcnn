@@ -415,8 +415,8 @@ for epoch_num in range(num_epochs):
             # Save boxes with (boxe, cls, regr)
                     Y_detection_train.append( (X2_train[:, sel_samples[i], :][0], P_cls[0][i], P_regr[0][i]))
             
-            all_dets = get_detections_boxes(Y_detection_train, C, class_mapping)
-            ap_train = get_average_precision(all_dets,img_data_train['bboxes'])
+            # all_dets = get_detections_boxes(Y_detection_train, C, class_mapping)
+            # ap_train = get_average_precision(all_dets,img_data_train['bboxes'])
 
 
             #detection_confusion_matrix = compare_detection_to_groundtruth(img_dataf_label['bboxes'], all_dets)
