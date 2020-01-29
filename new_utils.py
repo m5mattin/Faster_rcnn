@@ -1973,7 +1973,7 @@ def get_average_precision(all_det,groundtruth_boxes,iou_min):
 
 
     # print("  ")
-    print(tab_final)
+    #print(tab_final)
     ap = sum(tab_final)/len(tab_final)
     # print(ap)
     return ap

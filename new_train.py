@@ -307,8 +307,8 @@ iter_num = 0
 
 total_epochs += num_epochs
 
-losses_train = np.zeros((epoch_length, 5))
-losses_test = np.zeros((imagestest_length, 5))
+losses_train = np.zeros((epoch_length, 6))
+losses_test = np.zeros((imagestest_length, 6))
 
 rpn_accuracy_rpn_monitor_train = []
 rpn_accuracy_for_epoch_train = []
