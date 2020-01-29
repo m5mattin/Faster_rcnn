@@ -21,7 +21,7 @@ fig, axs = plt.subplots(1, 4)
 axs[0].set_title('Rpn',color='black')
 axs[1].set_title('Mean Overlap',color='black')
 axs[2].set_title('Classification',color='black')
-axs[2].set_title('Detection',color='black')
+axs[3].set_title('Detection',color='black')
 
 ### RPN
 

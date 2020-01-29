@@ -21,12 +21,15 @@ parser.add_argument('--images_path', type=str,
 			help='images folder')
 parser.add_argument('--mode', type=str,
 			help='training_mode')
+parser.add_argument('--checkpoint', type=str,
+			help='training_mode')
 
 args = parser.parse_args()
 
 device = args.device
 images_path = args.images_path
 mode = args.mode
+checkpoint_to_load = args.checkpoint
 
 if device:
     os.environ["CUDA_VISIBLE_DEVICES"]=device
@@ -242,7 +245,19 @@ model_all = Model([img_input, roi_input], rpn[:2] + classifier)
 
 # Because the google colab can only run the session several hours one time (then you need to connect again), 
 # we need to save the model and load the model to continue training
-if True:
+if checkpoint_to_load:
+    print('Continue training based on previous trained model')
+    print('Loading weights from {}'.format(C.model_path))
+    model_rpn.load_weights(checkpoint_to_load, by_name=True)
+    model_classifier.load_weights(checkpoint_to_load, by_name=True)
+    
+    # Load the records
+    record_df_train = pd.read_csv("../record_train.csv")
+    record_df_test = pd.read_csv("../record_test.csv")
+
+    print('Already train %dK batches'% (len(record_df_train)))
+
+else:
 # if not os.path.isfile(C.model_path):
     #If this is the begin of the training, load the pre-traind base network such as vgg-16
     try:
@@ -287,13 +302,13 @@ r_epochs = len(record_df_train)
 
 epoch_length = len(train_imgs)
 imagestest_length = len(test_imgs)
-num_epochs = 100
+num_epochs = 100 - r_epochs
 iter_num = 0
 
 total_epochs += num_epochs
 
-losses_train = np.zeros((epoch_length, 4))
-losses_test = np.zeros((imagestest_length, 4))
+losses_train = np.zeros((epoch_length, 5))
+losses_test = np.zeros((imagestest_length, 5))
 
 rpn_accuracy_rpn_monitor_train = []
 rpn_accuracy_for_epoch_train = []
@@ -417,10 +432,10 @@ for epoch_num in range(num_epochs):
                     Y_detection_train.append( (X2_train[:, sel_samples[i], :][0], P_cls[0][i], P_regr[0][i]))
          
             all_dets = get_detections_boxes(Y_detection_train, C, class_mapping)
-            
+
             ap_train50 = get_average_precision(all_dets,img_data_train['bboxes'],0.50)
             ap_train75 = get_average_precision(all_dets,img_data_train['bboxes'],0.75)
-
+    
 
             #detection_confusion_matrix = compare_detection_to_groundtruth(img_dataf_label['bboxes'], all_dets)
 
@@ -432,6 +447,10 @@ for epoch_num in range(num_epochs):
             losses_train[iter_num, 2] = loss_class_train[1]
             losses_train[iter_num, 3] = loss_class_train[2]
 
+            #
+            losses_train[iter_num, 4] = ap_train50
+            losses_train[iter_num, 5] = ap_train75
+
             iter_num += 1
             progbar_train.update(iter_num, [('rpn_cls', np.mean(losses_train[:iter_num, 0])), ('rpn_regr', np.mean(losses_train[:iter_num, 1])),
                                       ('final_cls', np.mean(losses_train[:iter_num, 2])), ('final_regr', np.mean(losses_train[:iter_num, 3]))])
@@ -442,10 +461,14 @@ for epoch_num in range(num_epochs):
                 loss_rpn_regr_train = np.mean(losses_train[:, 1])
                 loss_class_cls_train = np.mean(losses_train[:, 2])
                 loss_class_regr_train = np.mean(losses_train[:, 3])
+                ap_train50 = np.mean(losses_train[:, 4])
+                ap_train75 = np.mean(losses_train[:, 5])
 
                 rpn_mop = np.mean(rpn_overlaping_train[:,0,epoch_num])
                 rpn_moo = np.mean(rpn_overlaping_train[:,1,epoch_num])
                 rpn_mob = np.mean(rpn_overlaping_train[:,2,epoch_num])
+
+                
                 
                 mean_overlapping_bboxes_train = float(sum(rpn_accuracy_for_epoch_train)) / len(rpn_accuracy_for_epoch_train)
                 rpn_accuracy_for_epoch_train = []
@@ -554,6 +577,7 @@ for epoch_num in range(num_epochs):
                     
                     ap_test50 = get_average_precision(all_dets,img_data_test['bboxes'],0.50)
                     ap_test75 = get_average_precision(all_dets,img_data_test['bboxes'],0.75)
+                    quit()
                     #print(class_confusion_matrix_test)
                     # Loss rpn  
                     losses_test[num_image, 0] = loss_rpn_test[1]
@@ -563,12 +587,18 @@ for epoch_num in range(num_epochs):
                     losses_test[num_image, 2] = loss_class_test[1]
                     losses_test[num_image, 3] = loss_class_test[2]
 
+                    #
+                    losses_test[iter_num, 4] = ap_train50
+                    losses_test[iter_num, 5] = ap_train75
+
                     if num_image == (len(test_imgs)-1):
                         
                         loss_rpn_cls_test = np.mean(losses_test[:, 0])
                         loss_rpn_regr_test = np.mean(losses_test[:, 1])
                         loss_class_cls_test = np.mean(losses_test[:, 2])
                         loss_class_regr_test = np.mean(losses_test[:, 3])
+                        ap_train50 = np.mean(losses_test[:, 4])
+                        ap_train75 = np.mean(losses_test[:, 5])
 
                         rpn_mop = np.mean(rpn_overlaping_test[:,0,epoch_num])
                         rpn_moo = np.mean(rpn_overlaping_test[:,1,epoch_num])

@@ -17,7 +17,6 @@ import tensorflow as tf
 import pandas as pd
 import os
 import csv
-from operator import itemgetter
 
 from sklearn.metrics import average_precision_score
 
@@ -1910,7 +1909,8 @@ def get_detections_boxes(Y, C, class_mapping):
             y2 = C.rpn_stride*(y+h)
         except:
             pass
-        bboxes.append( ( [x1,y1,x2,y2], cls_name, Y[i][1][np.argmax(Y[i][1])] ) )
+        if cls_name == 0:
+            bboxes.append( ( [x1,y1,x2,y2], cls_name, Y[i][1][np.argmax(Y[i][1])] ) )
     return bboxes
 
 def get_average_precision(all_det,groundtruth_boxes,iou_min):
@@ -1923,8 +1923,7 @@ def get_average_precision(all_det,groundtruth_boxes,iou_min):
                                 groundtruth_boxes[i]['y1'],
                                 groundtruth_boxes[i]['x2'],
                                 groundtruth_boxes[i]['y2']))
-    
-    all_det = sorted(all_det,key=itemgetter(2),reverse=True)
+    all_det.sort(key=lambda tup: tup[2],reverse=True)
     Tp = 0
     cnt = 0
     Precision_inter = 0
@@ -1974,7 +1973,7 @@ def get_average_precision(all_det,groundtruth_boxes,iou_min):
 
 
     # print("  ")
-    # print(tab_final)
+    print(tab_final)
     ap = sum(tab_final)/len(tab_final)
     # print(ap)
     return ap
