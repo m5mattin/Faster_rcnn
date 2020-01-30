@@ -577,7 +577,7 @@ for epoch_num in range(num_epochs):
                     
                     ap_test50 = get_average_precision(all_dets,img_data_test['bboxes'],0.50)
                     ap_test75 = get_average_precision(all_dets,img_data_test['bboxes'],0.75)
-                    quit()
+
                     #print(class_confusion_matrix_test)
                     # Loss rpn  
                     losses_test[num_image, 0] = loss_rpn_test[1]
