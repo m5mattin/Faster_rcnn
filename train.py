@@ -277,8 +277,9 @@ if True:
                                                 'class_20', 'class_21', 'class_22',
                                                 'curr_loss'])
 
-optimizer = Adam(lr=1e-5)
-optimizer_classifier = Adam(lr=1e-5)
+Learning_rate = 1e-4
+optimizer = Adam(lr=Learning_rate)
+optimizer_classifier = Adam(lr=Learning_rate)
 model_rpn.compile(optimizer=optimizer, loss=[rpn_loss_cls(num_anchors), rpn_loss_regr(num_anchors)])
 print(classes_count_train)
 print(classes_count_test)
@@ -315,6 +316,12 @@ start_time = time.time()
 st_epoch = time.time()
 
 for epoch_num in range(num_epochs):
+    if (epoch_num+1) % 3 == 0:
+        print('Reduce current learning rate by 10. \nCurrent learning rate = ',  Learning_rate, '\nNew learning rate = ', Learning_rate/10)
+        Learning_rate = Learning_rate/10
+        K.set_value(model_rpn.optimizer.lr, Learning_rate)
+        K.set_value(model_classifier.optimizer.lr, Learning_rate)  
+
     print("time/epoch:{}".format(st_epoch-time.time()))
     st_epoch = time.time()
 

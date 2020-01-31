@@ -1896,19 +1896,18 @@ def get_detections_boxes(Y, C, class_mapping):
         x2 = C.rpn_stride*(x+w)
         y2 = C.rpn_stride*(y+h)
         cls_name =  np.argmax(Y[i][1])
-        try: 
-            (tx, ty, tw, th) = Y[i][2]
-            tx /= C.classifier_regr_std[0]
-            ty /= C.classifier_regr_std[1]
-            tw /= C.classifier_regr_std[2]
-            th /= C.classifier_regr_std[3]
-            x, y, w, h = apply_regr(x, y, w, h, tx, ty, tw, th)
-            x1 = C.rpn_stride*x
-            y1 = C.rpn_stride*y
-            x2 = C.rpn_stride*(x+w)
-            y2 = C.rpn_stride*(y+h)
-        except:
-            pass
+
+        (tx, ty, tw, th) = Y[i][2][0:4]
+        tx /= C.classifier_regr_std[0]
+        ty /= C.classifier_regr_std[1]
+        tw /= C.classifier_regr_std[2]
+        th /= C.classifier_regr_std[3]
+        x, y, w, h = apply_regr(x, y, w, h, tx, ty, tw, th)
+        x1 = C.rpn_stride*x
+        y1 = C.rpn_stride*y
+        x2 = C.rpn_stride*(x+w)
+        y2 = C.rpn_stride*(y+h)
+
         if cls_name == 0:
             bboxes.append( ( [x1,y1,x2,y2], cls_name, Y[i][1][np.argmax(Y[i][1])] ) )
     return bboxes
@@ -1956,10 +1955,6 @@ def get_average_precision(all_det,groundtruth_boxes,iou_min):
     tab_final = np.zeros(11)
     max_p = 0
 
-    # print(PR)
-    # print("  ")
-    # print(np.asarray(tab))
-
     seuil = 0
     for i in range(len(tab)):
         if (max_p < tab[i][3]):
@@ -1971,11 +1966,8 @@ def get_average_precision(all_det,groundtruth_boxes,iou_min):
             max_p = 0
             seuil = seuil + 1
 
-
-    # print("  ")
-    #print(tab_final)
     ap = sum(tab_final)/len(tab_final)
-    # print(ap)
+
     return ap
 
 

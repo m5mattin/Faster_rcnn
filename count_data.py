@@ -248,7 +248,7 @@ for i in range(len(train_imgs)):
                         
 
     if nb_iou_pigs > 0 or nb_iou_pigs == 0:
-        print(i, train_imgs[i]['filepath'],nb_iou_pigs,nms_boxes(list_of_boxs_pig))
+        print(i, train_imgs[i]['filepath'],nb_iou_pigs,nb_iou_others,nb_iou_neg)
 
 
     list_of_iou_pig_anms.append(nms_boxes(list_of_boxs_pig))
@@ -258,7 +258,6 @@ for i in range(len(train_imgs)):
     list_of_iou_others.append(nb_iou_others)
     list_of_iou_neg.append(nb_iou_neg)
 
-### To do : add nms 0.7
 
 # iou rpn
 print("nb anchors : ",cnt)
@@ -269,6 +268,25 @@ print("mean neg : ",sum(list_of_iou_neg)/len(train_imgs))
 print("mean pig anms: ",sum(list_of_iou_pig_anms)/len(train_imgs))
 print("mean others anms : ",sum(list_of_iou_others_anms)/len(train_imgs))
 
+fig, axs = plt.subplots(1, 3)
+
+axs[0].set_title('Overlap Pig',color='black')
+axs[1].set_title('Overlap Others',color='black')
+axs[2].set_title('Overlap Negative',color='black')
+
+
+axs[0].plot(    np.arange(0,len(train_imgs)),
+                list_of_iou_pig,
+                color='g')
+
+axs[1].plot(   np.arange(0,len(train_imgs)),
+                list_of_iou_others,
+                color='y')
+
+axs[2].plot(   np.arange(0,len(train_imgs)),
+                list_of_iou_neg,
+                color='r')
+
 #plt.hist(list_of_iou_pig,bins=100,color=('purple'))
-plt.hist(list_of_iou_others,bins=100,color=('purple'))
+#plt.hist(list_of_iou_others,bins=100,color=('purple'))
 plt.show()
