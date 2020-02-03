@@ -1891,10 +1891,6 @@ def get_detections_boxes(Y, C, class_mapping):
     # class_mapping = {v: k for k, v in class_mapping.items()}
     for i in range(len(Y)):
         (x, y, w, h) = Y[i][0]
-        x1 = C.rpn_stride*x
-        y1 = C.rpn_stride*y
-        x2 = C.rpn_stride*(x+w)
-        y2 = C.rpn_stride*(y+h)
         cls_name =  np.argmax(Y[i][1])
 
         (tx, ty, tw, th) = Y[i][2][0:4]
