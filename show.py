@@ -2,11 +2,17 @@ from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import colors as mcolors
-
+import argparse
 def get_rpn_recall(c):
     tp = c['rpn_00']
     fn = c['rpn_10']
     return tp / (tp+fn)
+parser = argparse.ArgumentParser(description='Argument')
+parser.add_argument('-ap','--ap', action='store_true',
+			help='show result rpn')
+
+args = parser.parse_args()
+show_ap = args.ap
 
 colors = dict(mcolors.BASE_COLORS, **mcolors.CSS4_COLORS)
 
