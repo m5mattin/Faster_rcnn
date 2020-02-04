@@ -275,18 +275,20 @@ axs[1].set_title('Overlap Others',color='black')
 axs[2].set_title('Overlap Negative',color='black')
 
 
-axs[0].plot(    np.arange(0,len(train_imgs)),
-                list_of_iou_pig,
-                color='g')
+# axs[0].plot(    np.arange(0,len(train_imgs)),
+#                 list_of_iou_pig,
+#                 color='g')
 
-axs[1].plot(   np.arange(0,len(train_imgs)),
-                list_of_iou_others,
-                color='y')
+# axs[1].plot(   np.arange(0,len(train_imgs)),
+#                 list_of_iou_others,
+#                 color='y')
 
-axs[2].plot(   np.arange(0,len(train_imgs)),
-                list_of_iou_neg,
-                color='r')
+# axs[2].plot(   np.arange(0,len(train_imgs)),
+#                 list_of_iou_neg,
+#                 color='r')
 
-#plt.hist(list_of_iou_pig,bins=100,color=('purple'))
-#plt.hist(list_of_iou_others,bins=100,color=('purple'))
+axs[0].hist(list_of_iou_pig,bins=50,color=('g'))
+axs[1].hist(list_of_iou_others,bins=50,color=('y'))
+axs[2].hist(list_of_iou_neg,bins=50,color=('r'))
+
 plt.show()
