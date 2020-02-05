@@ -596,8 +596,8 @@ for epoch_num in range(num_epochs):
                     losses_test[num_image, 3] = loss_class_test[2]
 
                     #
-                    losses_test[iter_num, 4] = ap_train50
-                    losses_test[iter_num, 5] = ap_train75
+                    losses_test[num_image, 4] = ap_train50
+                    losses_test[num_image, 5] = ap_train75
 
                     if num_image == (len(test_imgs)-1):
                         

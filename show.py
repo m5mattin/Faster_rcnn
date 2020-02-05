@@ -3,10 +3,23 @@ import numpy as np
 import pandas as pd
 from matplotlib import colors as mcolors
 import argparse
+
 def get_rpn_recall(c):
     tp = c['rpn_00']
     fn = c['rpn_10']
     return tp / (tp+fn)
+
+def get_class_f1(c):
+    tp = c['class_00']
+    fn = c['class_10']  + c['class_10']
+    fp = c['class_01']  + c['class_02']
+    tn = c['class_11']  + c['class_12'] + c['class_21'] + c['class_22']
+    recall = tp / (tp + fn)
+    precision = tp / (tp + fp)
+    f1 = 2*(precision * recall)/(precision + recall)
+    return recall, precision, f1
+
+
 parser = argparse.ArgumentParser(description='Argument')
 parser.add_argument('-ap','--ap', action='store_true',
 			help='show result rpn')
@@ -21,25 +34,21 @@ record_train = pd.read_csv("../record_train.csv")
 record_test = pd.read_csv("../record_test.csv")
 
 r_epochs = len(record_train)
+if show_ap:
+    fig, axs = plt.subplots(1, 4)
+    axs[3].set_title('Detection',color='black')
 
-fig, axs = plt.subplots(1, 4)
+else: 
+    fig, axs = plt.subplots(1, 3)
 
 axs[0].set_title('Rpn',color='black')
 axs[1].set_title('Mean Overlap',color='black')
 axs[2].set_title('Classification',color='black')
-axs[3].set_title('Detection',color='black')
 
 ### RPN
 
-tp_rpn_test = record_test['rpn_00']
-fn_rpn_test = record_test['rpn_10']
-recall_rpn_test = tp_rpn_test / (tp_rpn_test + fn_rpn_test)
-
-tp_rpn_train = record_train['rpn_00']
-fn_rpn_train = record_train['rpn_10']
-recall_rpn_train = tp_rpn_train / (tp_rpn_train + fn_rpn_train)
-
-# recall
+recall_rpn_test = get_rpn_recall(record_test)
+recall_rpn_train = get_rpn_recall(record_train)
 
 axs[0].plot(    np.arange(0, r_epochs), 
                 recall_rpn_train,
@@ -103,17 +112,8 @@ axs[1].plot(    np.arange(0, r_epochs),
 
 # Classification
 
-tp_class_train = record_train['class_00']
-fn_class_train = record_train['class_10'] + record_train['class_20']
-fp_class_train = record_train['class_01'] + record_train['class_02']
-tn_class_train = record_train['class_11'] + record_train['class_22'] + record_train['class_12'] + record_train['class_21']
-acc_class_train = (tp_class_train+tn_class_train)/(tp_class_train+fn_class_train+fp_class_train+tn_class_train)
-
-tp_class_test = record_test['class_00']
-fn_class_test = record_test['class_10'] + record_test['class_20']
-fp_class_test = record_test['class_01'] + record_test['class_02']
-tn_class_test = record_test['class_11'] + record_test['class_22'] + record_test['class_12'] + record_test['class_21']
-acc_class_test = (tp_class_test+tn_class_test)/(tp_class_test+fn_class_test+fp_class_test+tn_class_test)
+recall_class_test, precision_class_test, f1_class_test = get_class_f1(record_test)
+recall_class_train, precision_class_train, f1_class_train = get_class_f1(record_train)
 
 # loss 
 axs[2].plot(    np.arange(0, r_epochs), 
@@ -127,7 +127,7 @@ axs[2].plot(    np.arange(0, r_epochs),
                 color=colors['darkgreen'])
 
 axs[2].plot(    np.arange(0, r_epochs), 
-                acc_class_train,
+                f1_class_train,
                 label='train set: class_pig_acc',
                 color=colors['darkred'])
 
@@ -144,48 +144,60 @@ axs[2].plot(    np.arange(0, r_epochs),
                 linestyle=':')
 
 axs[2].plot(    np.arange(0, r_epochs), 
-                acc_class_test,
+                f1_class_test,
                 label='val set: class_pig_acc',
                 color=colors['darkred'],
                 linestyle=':')
 
+axs[2].plot(    np.arange(0, r_epochs), 
+                precision_class_test,
+                label='val set: precision_class_test',
+                color=colors['darkviolet'],
+                linestyle=':')
+
+axs[2].plot(    np.arange(0, r_epochs), 
+                recall_class_test,
+                label='val set: recall_class_test',
+                color=colors['pink'],
+                linestyle=':')
+
 #Detection
+if show_ap:
+    axs[3].plot(    np.arange(0, r_epochs), 
+                    record_train['curr_loss'],
+                    label='train set: curr_loss',
+                    color=colors['darkblue'])
 
-axs[3].plot(    np.arange(0, r_epochs), 
-                record_train['curr_loss'],
-                label='train set: curr_loss',
-                color=colors['darkblue'])
+    axs[3].plot(    np.arange(0, r_epochs), 
+                    record_test['curr_loss'],
+                    label='test set: curr_loss',
+                    color=colors['darkblue'],
+                    linestyle=':')
 
-axs[3].plot(    np.arange(0, r_epochs), 
-                record_test['curr_loss'],
-                label='test set: curr_loss',
-                color=colors['darkblue'],
-                linestyle=':')
+    axs[3].plot(    np.arange(0, r_epochs), 
+                    record_train['ap50'],
+                    label='train set: ap50',
+                    color=colors['darkgreen'])
 
-axs[3].plot(    np.arange(0, r_epochs), 
-                record_train['ap50'],
-                label='train set: ap50',
-                color=colors['darkgreen'])
+    axs[3].plot(    np.arange(0, r_epochs), 
+                    record_test['ap50'],
+                    label='test set: ap50',
+                    color=colors['darkgreen'],
+                    linestyle=':')
 
-axs[3].plot(    np.arange(0, r_epochs), 
-                record_test['ap50'],
-                label='test set: ap50',
-                color=colors['darkgreen'],
-                linestyle=':')
+    axs[3].plot(    np.arange(0, r_epochs), 
+                    record_train['ap75'],
+                    label='train set: ap75',
+                    color=colors['darkred'])
 
-axs[3].plot(    np.arange(0, r_epochs), 
-                record_train['ap75'],
-                label='train set: ap75',
-                color=colors['darkred'])
+    axs[3].plot(    np.arange(0, r_epochs), 
+                    record_test['ap75'],
+                    label='test set: ap75',
+                    color=colors['darkred'],
+                    linestyle=':')
+    axs[3].legend(loc="best")   
 
-axs[3].plot(    np.arange(0, r_epochs), 
-                record_test['ap75'],
-                label='test set: ap75',
-                color=colors['darkred'],
-                linestyle=':')
-
-
-for i in range(4):
+for i in range(3):
     axs[i].legend(loc="best")
 
 plt.show()
