@@ -370,10 +370,10 @@ for epoch_num in range(num_epochs):
             # Convert rpn layer to roi bboxes
             R_train, probs = rpn_to_roi(P_rpn_train[0], P_rpn_train[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)
             # NMS 0. 45
-            R_rpn_nms, probs_nms = non_max_suppression_fast(R_train,probs,overlap_thresh=0.45)
+            R_rpn_nms, probs_nms, valid = non_max_suppression_fast(R_train,probs,overlap_thresh=0.45)
             # Get all boxes in list
             all_det_rpn = []
-            if R_rpn_nms:
+            if valid is True:
                 for i in range(R_rpn_nms.shape[0]):
                     if probs_nms[i] > 0.5:
                         all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
@@ -454,9 +454,9 @@ for epoch_num in range(num_epochs):
             bboxes, probs = get_detections_boxes(Y_detection_train, C, class_mapping)
             bboxes = np.asarray(bboxes)
             probs = np.asarray(probs)
-            bboxes, probs = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
+            bboxes, probs, valid = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
             all_det = []
-            if bboxes:
+            if valid is True:
                 for i in range(bboxes.shape[0]):
                     if probs[i] > 0.5:          
                         all_det.append((bboxes[i],0,probs[i]))
@@ -563,9 +563,9 @@ for epoch_num in range(num_epochs):
                     P_rpn_test = model_rpn.predict_on_batch(X_test)
                     # Convert rpn layer to roi bboxes
                     R_test,probs = rpn_to_roi(P_rpn_test[0], P_rpn_test[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)  
-                    R_rpn_nms, probs_nms = non_max_suppression_fast(R_test,probs,overlap_thresh=0.45)
+                    R_rpn_nms, probs_nms, valid = non_max_suppression_fast(R_test,probs,overlap_thresh=0.45)
                     all_det_rpn = []
-                    if R_rpn_nms:
+                    if valid is True:
                         for i in range(R_rpn_nms.shape[0]):
                             if probs_nms[i] > 0.5:
                                 all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
@@ -616,9 +616,9 @@ for epoch_num in range(num_epochs):
                     bboxes, probs = get_detections_boxes(Y_detection_train, C, class_mapping)
                     bboxes = np.asarray(bboxes)
                     probs = np.asarray(probs)
-                    bboxes, probs = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
+                    bboxes, probs, valid = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
                     all_det = []
-                    if bboxes:
+                    if valid is True:
                         for i in range(bboxes.shape[0]):
                             if probs[i] > 0.5:          
                                 all_det.append((bboxes[i],0,probs[i]))

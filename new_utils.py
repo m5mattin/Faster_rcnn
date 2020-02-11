@@ -1194,7 +1194,7 @@ def non_max_suppression_fast(boxes, probs, overlap_thresh=0.9, max_boxes=300):
     #   Step 3: Calculate the IoU with 'Last' box and other boxes in the list. If the IoU is larger than overlap_threshold, delete the box from list
     #   Step 4: Repeat step 2 and step 3 until there is no item in the probs list 
     if len(boxes) == 0:
-        return [],[],False
+        return 0,0,False
 
     # grab the coordinates of the bounding boxes
     x1 = boxes[:, 0]
