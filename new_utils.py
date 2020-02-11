@@ -1194,7 +1194,7 @@ def non_max_suppression_fast(boxes, probs, overlap_thresh=0.9, max_boxes=300):
     #   Step 3: Calculate the IoU with 'Last' box and other boxes in the list. If the IoU is larger than overlap_threshold, delete the box from list
     #   Step 4: Repeat step 2 and step 3 until there is no item in the probs list 
     if len(boxes) == 0:
-        return [],[]
+        return [],[],False
 
     # grab the coordinates of the bounding boxes
     x1 = boxes[:, 0]
@@ -1257,7 +1257,7 @@ def non_max_suppression_fast(boxes, probs, overlap_thresh=0.9, max_boxes=300):
     boxes = boxes[pick].astype("int")
     probs = probs[pick]
 
-    return boxes, probs
+    return boxes, probs, True
 
 def apply_regr_np(X, T):
     """Apply regression layer to all anchors in one feature map
@@ -1635,7 +1635,7 @@ def rpn_to_roi(rpn_layer, regr_layer, C, dim_ordering, use_regr=True, max_boxes=
 
     # Apply non_max_suppression
     # Only extract the bboxes. Don't need rpn probs in the later process
-    result,probs = non_max_suppression_fast(all_boxes, all_probs, overlap_thresh=overlap_thresh, max_boxes=max_boxes)
+    result,probs, valid = non_max_suppression_fast(all_boxes, all_probs, overlap_thresh=overlap_thresh, max_boxes=max_boxes)
 
     return result,probs
 
