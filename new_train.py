@@ -142,8 +142,6 @@ class Config:
 
         self.model_path = None
 
-
-
 ############################################################
                         #Start training
 ############################################################
@@ -282,7 +280,8 @@ else:
                                                 'class_00', 'class_01', 'class_02',
                                                 'class_10', 'class_11', 'class_12',
                                                 'class_20', 'class_21', 'class_22',
-                                                'curr_loss','rpn_mop','rpn_moo','rpn_mob','ap50','ap75'])
+                                                'curr_loss','rpn_mop','rpn_moo','rpn_mob',
+                                                'ap_rpn50','ap_rpn75','ap_detect50','ap_detect75'])
 
     record_df_test = pd.DataFrame(columns=[    'loss_rpn_cls', 'loss_rpn_regr', 
                                                 'rpn_00', 'rpn_01' , 'rpn_02',
@@ -291,7 +290,8 @@ else:
                                                 'class_00', 'class_01', 'class_02',
                                                 'class_10', 'class_11', 'class_12',
                                                 'class_20', 'class_21', 'class_22',
-                                                'curr_loss','rpn_mop','rpn_moo','rpn_mob','ap50','ap75'])
+                                                'curr_loss','rpn_mop','rpn_moo','rpn_mob',
+                                                'ap_rpn50','ap_rpn75','ap_detect50','ap_detect75'])
 Learning_rate = 1e-4
 optimizer = Adam(lr=Learning_rate)
 optimizer_classifier = Adam(lr=Learning_rate)
@@ -311,8 +311,8 @@ iter_num = 0
 
 total_epochs += num_epochs
 
-losses_train = np.zeros((epoch_length, 6))
-losses_test = np.zeros((imagestest_length, 6))
+losses_train = np.zeros((epoch_length, 8))
+losses_test = np.zeros((imagestest_length, 8))
 
 rpn_accuracy_rpn_monitor_train = []
 rpn_accuracy_for_epoch_train = []
@@ -361,15 +361,24 @@ for epoch_num in range(num_epochs):
             
             # Generate X (x_img) and label Y ([y_rpn_cls, y_rpn_regr])
             print("mode : {}".format(mode))
-            X_train, Y_train, img_data_train, debug_img_train, debug_num_pos_train = next(data_gen_train)
+            X_train, Y_train, img_data_train, debug_img_train, debug_num_pos_train, list_others = next(data_gen_train)
+            #print('list_others : ',list_others)
             # Train rpn model and get loss value [_, loss_rpn_cls, loss_rpn_regr]
             loss_rpn_train = model_rpn.train_on_batch(X_train, Y_train)
             # Get predicted rpn from rpn model [rpn_cls, rpn_regr]
             P_rpn_train = model_rpn.predict_on_batch(X_train)
-            
             # Convert rpn layer to roi bboxes
-
             R_train, probs = rpn_to_roi(P_rpn_train[0], P_rpn_train[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)
+            # NMS 0. 45
+            R_rpn_nms, probs_nms = non_max_suppression_fast(R_train,probs,overlap_thresh=0.45)
+            # Get all boxes in list
+            all_det_rpn = []
+            for i in range(R_rpn_nms.shape[0]):
+                if probs_nms[i] > 0.5:
+                    all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
+            # Calcul average precision with groundtruth
+            ap_rpn_train50 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.50)
+            ap_rpn_train75 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.75)
             # note: calc_iou converts from (x1,y1,x2,y2) to (x,y,w,h) format
             # X2: bboxes that iou > C.classifier_min_overlap for all gt bboxes in 300 non_max_suppression bboxes
             # Y1: one hot code for bboxes from above => x_roi (X)
@@ -387,6 +396,7 @@ for epoch_num in range(num_epochs):
             tmp_confusion = compare_rpn_to_groundtruth(img_data_train['bboxes'],R_train*C.rpn_stride,num_boxes=300)
             rpn_confusion_matrix_train = rpn_confusion_matrix_train + tmp_confusion
             
+
             # If X2 is None means there are no matching bboxes
             if X2_train is None:
                 rpn_accuracy_rpn_monitor_train.append(0)
@@ -407,10 +417,8 @@ for epoch_num in range(num_epochs):
                 pos_samples_train = pos_samples_train[0]
             else:
                 pos_samples_train = []
-
             rpn_accuracy_rpn_monitor_train.append(len(pos_samples_train))
             rpn_accuracy_for_epoch_train.append((len(pos_samples_train)))
-         
             
             X2, Y1, Y2, sel_samples = get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, mode, overlap_others)
             loss_class_train = model_classifier.train_on_batch([X_train, X2], [Y1, Y2]) 
@@ -420,7 +428,6 @@ for epoch_num in range(num_epochs):
             #  X2 => num_rois (4 in here) bboxes which contains selected neg and pos
             #  Y1 => one hot encode for num_rois bboxes which contains selected neg and pos
             #  Y2 => labels and gt bboxes for num_rois bboxes which contains selected neg and pos
-
             for k in range(int(len(Y1_train[0])//C.num_rois)):
                 
                 X2, Y1, Y2, sel_samples = get_testing_batch_classifier(C, X2_train, Y1_train, Y2_train, mode, k)
@@ -439,13 +446,18 @@ for epoch_num in range(num_epochs):
                     class_confusion_matrix_train[class_predicted, class_gt] = class_confusion_matrix_train[class_predicted, class_gt] + 1
             # Save boxes with (boxe, cls, regr)
                     Y_detection_train.append( (X2_train[:, sel_samples[i], :][0], P_cls[0][i], P_regr[0][i]))
-         
-            all_dets = get_detections_boxes(Y_detection_train, C, class_mapping)
+ 
+            bboxes, probs = get_detections_boxes(Y_detection_train, C, class_mapping)
+            bboxes = np.asarray(bboxes)
+            probs = np.asarray(probs)
+            bboxes, probs = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
+            all_det = []
 
-            ap_train50 = get_average_precision(all_dets,img_data_train['bboxes'],0.50)
-            ap_train75 = get_average_precision(all_dets,img_data_train['bboxes'],0.75)
-    
-
+            for i in range(bboxes.shape[0]):
+                if probs[i] > 0.5:          
+                    all_det.append((bboxes[i],0,probs[i]))
+            ap_detect_train50 = get_average_precision(all_det,img_data_train['bboxes'],0.50)
+            ap_detect_train75 = get_average_precision(all_det,img_data_train['bboxes'],0.75)
             #detection_confusion_matrix = compare_detection_to_groundtruth(img_dataf_label['bboxes'], all_dets)
 
             # Loss rpn  
@@ -457,31 +469,31 @@ for epoch_num in range(num_epochs):
             losses_train[iter_num, 3] = loss_class_train[2]
 
             #
-            losses_train[iter_num, 4] = ap_train50
-            losses_train[iter_num, 5] = ap_train75
+            losses_train[iter_num, 4] = ap_rpn_train50
+            losses_train[iter_num, 5] = ap_rpn_train75
+            losses_train[iter_num, 6] = ap_detect_train50
+            losses_train[iter_num, 7] = ap_detect_train75
 
             iter_num += 1
             progbar_train.update(iter_num, [('rpn_cls', np.mean(losses_train[:iter_num, 0])), ('rpn_regr', np.mean(losses_train[:iter_num, 1])),
-                                      ('final_cls', np.mean(losses_train[:iter_num, 2])), ('final_regr', np.mean(losses_train[:iter_num, 3]))])
-                            
+                                      ('final_cls', np.mean(losses_train[:iter_num, 2])), ('final_regr', np.mean(losses_train[:iter_num, 3]))])             
             if iter_num == epoch_length:
                 
                 loss_rpn_cls_train = np.mean(losses_train[:, 0])
                 loss_rpn_regr_train = np.mean(losses_train[:, 1])
                 loss_class_cls_train = np.mean(losses_train[:, 2])
                 loss_class_regr_train = np.mean(losses_train[:, 3])
-                ap_train50 = np.mean(losses_train[:, 4])
-                ap_train75 = np.mean(losses_train[:, 5])
+                ap_rpn_train50 = np.mean(losses_train[:, 4])
+                ap_rpn_train75 = np.mean(losses_train[:, 5])
+                ap_detect_train50 = np.mean(losses_train[:, 6])
+                ap_detect_train75 = np.mean(losses_train[:, 7])
 
                 rpn_mop = np.mean(rpn_overlaping_train[:,0,epoch_num])
                 rpn_moo = np.mean(rpn_overlaping_train[:,1,epoch_num])
                 rpn_mob = np.mean(rpn_overlaping_train[:,2,epoch_num])
-
-                
-                
+  
                 mean_overlapping_bboxes_train = float(sum(rpn_accuracy_for_epoch_train)) / len(rpn_accuracy_for_epoch_train)
-                rpn_accuracy_for_epoch_train = []
-
+                rpn_accuracy_for_epoch_train = []  
                 if C.verbose:
                     print('epoch {}'.format(epoch_num))
                     print('Loss RPN classifier: {}'.format(loss_rpn_cls_train))
@@ -490,8 +502,7 @@ for epoch_num in range(num_epochs):
                     print('Loss Detector regression: {}'.format(loss_class_regr_train))
                     print('Total loss: {}'.format(loss_rpn_cls_train + loss_rpn_regr_train + loss_class_cls_train + loss_class_regr_train))
 
-                    elapsed_time = (time.time()-start_time)/60
-
+                    elapsed_time = (time.time()-start_time)/60 
                 curr_loss_train = loss_rpn_cls_train + loss_rpn_regr_train + loss_class_cls_train + loss_class_regr_train
                 iter_num = 0
 
@@ -505,8 +516,7 @@ for epoch_num in range(num_epochs):
 
                 #Save weight from the current model 
                 checkpoint_path = "../checkpoint/model_frcnn_vgg_epoch" + mode + str(len(record_df_train))+".hdf5"
-                model_all.save_weights(checkpoint_path)
-                
+                model_all.save_weights(checkpoint_path) 
                 new_row_train = {   'loss_rpn_cls':round(loss_rpn_cls_train, 3), 
                                     'loss_rpn_regr':round(loss_rpn_regr_train, 3), 
                                     'loss_class_cls':round(loss_class_cls_train, 3), 
@@ -530,25 +540,34 @@ for epoch_num in range(num_epochs):
                                     'rpn_mop':round(rpn_mop, 3),
                                     'rpn_moo':round(rpn_moo, 3),
                                     'rpn_mob':round(rpn_mob, 3),
-                                    'ap50':round(ap_train50,3),
-                                    'ap75':round(ap_train75,3)
-                                    }
-
+                                    'ap_rpn50':round(ap_rpn_train50,3),
+                                    'ap_rpn75':round(ap_rpn_train75,3),
+                                    'ap_detect50':round(ap_detect_train50,3),
+                                    'ap_detect75':round(ap_detect_train75,3)
+                                    }  
                 for num_image in range (len(test_imgs)):  
                     print("epoch {}, test image {}/{} processed".format(epoch_num, num_image+1,len(test_imgs)))
                     # Generate X (x_img) and label Y ([y_rpn_cls, y_rpn_regr])
-                    X_test, Y_test, img_data_test, debug_img_test, debug_num_pos_test = next(data_gen_test)
+                    X_test, Y_test, img_data_test, debug_img_test, debug_num_pos_test, list_others  = next(data_gen_test)
                     # Train rpn model and get loss value [_, loss_rpn_cls, loss_rpn_regr] 
                     loss_rpn_test = model_rpn.test_on_batch(X_test, Y_test)
                     # Get predicted rpn from rpn model [rpn_cls, rpn_regr]
                     P_rpn_test = model_rpn.predict_on_batch(X_test)
-                    # R: bboxes (shape=(300,4))
                     # Convert rpn layer to roi bboxes
-                    R_test,probs = rpn_to_roi(P_rpn_test[0], P_rpn_test[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)                     
+                    R_test,probs = rpn_to_roi(P_rpn_test[0], P_rpn_test[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)  
+                    R_rpn_nms, probs_nms = non_max_suppression_fast(R_test,probs,overlap_thresh=0.45)
+                    all_det_rpn = []
+                    for i in range(R_rpn_nms.shape[0]):
+                        if probs_nms[i] > 0.5:
+                            all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
+                    # Calcul average precision with groundtruth
+                    ap_rpn_test50 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.50)
+                    ap_rpn_test75 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.75)
                     # note: calc_iou converts from (x1,y1,x2,y2) to (x,y,w,h) format
                     # X2: bboxes that iou > C.classifier_min_overlap for all gt bboxes in 300 non_max_suppression bboxes
                     # Y1: one hot code for bboxes from above => x_roi (X)
                     # Y2: corresponding labels and corresponding gt bboxes
+
                     X2_test, Y1_test, Y2_test, IouS_test, overlap_others = calc_iou(R_test, img_data_test, C, class_mapping_label)
                     for i in range(len(Y1_test[0])):
                         j = np.where(Y1_test[0,i,:]>0)
@@ -581,11 +600,20 @@ for epoch_num in range(num_epochs):
 
                             class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
                             Y_detection_test.append( (X2_test[:, sel_samples[i], :][0], P_cls[0][i], P_regr[0][i]))
-                    all_dets = get_detections_boxes(Y_detection_test, C, class_mapping)
                     
-                    ap_test50 = get_average_precision(all_dets,img_data_test['bboxes'],0.50)
-                    ap_test75 = get_average_precision(all_dets,img_data_test['bboxes'],0.75)
+                    bboxes, probs = get_detections_boxes(Y_detection_train, C, class_mapping)
+                    bboxes = np.asarray(bboxes)
+                    probs = np.asarray(probs)
+                    bboxes, probs = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
+                    all_det = []
 
+                    for i in range(bboxes.shape[0]):
+                        if probs[i] > 0.5:          
+                            all_det.append((bboxes[i],0,probs[i]))
+
+                    ap_detect_test50 = get_average_precision(all_det,img_data_train['bboxes'],0.50)
+                    ap_detect_test75 = get_average_precision(all_det,img_data_train['bboxes'],0.75)
+            
                     #print(class_confusion_matrix_test)
                     # Loss rpn  
                     losses_test[num_image, 0] = loss_rpn_test[1]
@@ -596,8 +624,10 @@ for epoch_num in range(num_epochs):
                     losses_test[num_image, 3] = loss_class_test[2]
 
                     #
-                    losses_test[num_image, 4] = ap_train50
-                    losses_test[num_image, 5] = ap_train75
+                    losses_test[num_image, 4] = ap_rpn_test50
+                    losses_test[num_image, 5] = ap_rpn_test75
+                    losses_test[num_image, 6] = ap_detect_test50
+                    losses_test[num_image, 7] = ap_detect_test75
 
                     if num_image == (len(test_imgs)-1):
                         
@@ -605,8 +635,10 @@ for epoch_num in range(num_epochs):
                         loss_rpn_regr_test = np.mean(losses_test[:, 1])
                         loss_class_cls_test = np.mean(losses_test[:, 2])
                         loss_class_regr_test = np.mean(losses_test[:, 3])
-                        ap_train50 = np.mean(losses_test[:, 4])
-                        ap_train75 = np.mean(losses_test[:, 5])
+                        ap_rpn_test50 = np.mean(losses_test[:, 4])
+                        ap_rpn_test75 = np.mean(losses_test[:, 5])
+                        ap_detect_test50 = np.mean(losses_test[:, 6])
+                        ap_detect_test75 = np.mean(losses_test[:, 7])
 
                         rpn_mop = np.mean(rpn_overlaping_test[:,0,epoch_num])
                         rpn_moo = np.mean(rpn_overlaping_test[:,1,epoch_num])
@@ -637,8 +669,10 @@ for epoch_num in range(num_epochs):
                                             'rpn_mop':round(rpn_mop, 3),
                                             'rpn_moo':round(rpn_moo, 3),
                                             'rpn_mob':round(rpn_mob, 3),
-                                            'ap50':round(ap_test50, 3),
-                                            'ap75':round(ap_test75, 3)
+                                            'ap_rpn50':round(ap_rpn_test50, 3),
+                                            'ap_rpn75':round(ap_rpn_test75, 3),
+                                            'ap_detect50':round(ap_detect_test50, 3),
+                                            'ap_detect75':round(ap_detect_test75, 3)
                                     }
 
                         record_df_train = record_df_train.append(new_row_train, ignore_index=True)

@@ -39,11 +39,12 @@ if show_ap:
     axs[3].set_title('Detection',color='black')
 
 else: 
-    fig, axs = plt.subplots(1, 3)
+    fig, axs = plt.subplots(1, 4)
 
 axs[0].set_title('Rpn',color='black')
 axs[1].set_title('Mean Overlap',color='black')
 axs[2].set_title('Classification',color='black')
+axs[3].set_title('Detection',color='black')
 
 ### RPN
 
@@ -51,13 +52,23 @@ recall_rpn_test = get_rpn_recall(record_test)
 recall_rpn_train = get_rpn_recall(record_train)
 
 axs[0].plot(    np.arange(0, r_epochs), 
-                recall_rpn_train,
-                label='train set: recall',
+                record_train['ap_rpn50'],
+                label='train set: ap50',
+                color=colors['chocolate'])
+axs[0].plot(    np.arange(0, r_epochs), 
+                record_train['ap_rpn75'],
+                label='train set: ap50',
                 color=colors['darkred'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
-                recall_rpn_test,
-                label='val set: recall',
+                record_test['ap_rpn50'],
+                label='val set: ap50',
+                color=colors['chocolate'],
+                linestyle=":")
+
+axs[0].plot(    np.arange(0, r_epochs), 
+                record_test['ap_rpn50'],
+                label='val set: ap75',
                 color=colors['darkred'],
                 linestyle=":")
 
@@ -161,43 +172,43 @@ axs[2].plot(    np.arange(0, r_epochs),
                 color=colors['pink'],
                 linestyle=':')
 
-#Detection
-if show_ap:
-    axs[3].plot(    np.arange(0, r_epochs), 
-                    record_train['curr_loss'],
-                    label='train set: curr_loss',
-                    color=colors['darkblue'])
 
-    axs[3].plot(    np.arange(0, r_epochs), 
-                    record_test['curr_loss'],
-                    label='test set: curr_loss',
-                    color=colors['darkblue'],
-                    linestyle=':')
+axs[3].plot(    np.arange(0, r_epochs), 
+                record_train['curr_loss'],
+                label='train set: curr_loss',
+                color=colors['darkblue'])
 
-    axs[3].plot(    np.arange(0, r_epochs), 
-                    record_train['ap50'],
-                    label='train set: ap50',
-                    color=colors['darkgreen'])
+axs[3].plot(    np.arange(0, r_epochs), 
+                record_test['curr_loss'],
+                label='test set: curr_loss',
+                color=colors['darkblue'],
+                linestyle=':')
 
-    axs[3].plot(    np.arange(0, r_epochs), 
-                    record_test['ap50'],
-                    label='test set: ap50',
-                    color=colors['darkgreen'],
-                    linestyle=':')
+axs[3].plot(    np.arange(0, r_epochs), 
+                record_train['ap_detect50'],
+                label='train set: ap50',
+                color=colors['darkgreen'])
 
-    axs[3].plot(    np.arange(0, r_epochs), 
-                    record_train['ap75'],
-                    label='train set: ap75',
-                    color=colors['darkred'])
+axs[3].plot(    np.arange(0, r_epochs), 
+                record_test['ap_detect50'],
+                label='test set: ap50',
+                color=colors['darkgreen'],
+                linestyle=':')
 
-    axs[3].plot(    np.arange(0, r_epochs), 
-                    record_test['ap75'],
-                    label='test set: ap75',
-                    color=colors['darkred'],
-                    linestyle=':')
-    axs[3].legend(loc="best")   
+axs[3].plot(    np.arange(0, r_epochs), 
+                record_train['ap_detect75'],
+                label='train set: ap75',
+                color=colors['darkred'])
 
-for i in range(3):
+axs[3].plot(    np.arange(0, r_epochs), 
+                record_test['ap_detect75'],
+                label='test set: ap75',
+                color=colors['darkred'],
+                linestyle=':')
+axs[3].legend(loc="best")   
+
+
+for i in range(4):
     axs[i].legend(loc="best")
 
 plt.show()

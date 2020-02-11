@@ -862,6 +862,20 @@ def calc_rpn(C, img_data, width, height, resized_width, resized_height, img_leng
         random.shuffle(list_neg_anchors)
         neg = list_neg_anchors[:(C.rpn_num_train_examples-len(pos))]
 
+    if (mode == 'HA'):
+        if len(list_pig_anchors) <= C.rpn_num_train_examples/3:
+            pos = list_pig_anchors
+        else:
+            pos = list_pig_anchors[:int((C.rpn_num_train_examples/3))]
+        
+        if len(list_others_anchors) <= C.rpn_num_train_examples/3:
+            neg = list_others_anchors
+        elif len(list_others_anchors) > C.rpn_num_train_examples/3:
+            neg = list_others_anchors
+        
+        nb_others = len(neg) 
+        neg = neg + list_neg_anchors[:(C.rpn_num_train_examples-nb_others-len(pos))]
+
         # Fill positives with pig / negatives with background and others
     if (mode == 'PaHNO'):
         if len(list_pig_anchors) <= C.rpn_num_train_examples/3:
@@ -921,8 +935,26 @@ def calc_rpn(C, img_data, width, height, resized_width, resized_height, img_leng
 
     y_rpn_cls = np.concatenate([y_is_box_valid, y_rpn_overlap], axis=1)
     y_rpn_regr = np.concatenate([np.repeat(y_rpn_overlap, 4, axis=1), y_rpn_regr], axis=1)
+    
+    # get list of box matching with gt others
+    a = []
+    for i in range(len(list_others_anchors)):
+        list_others_anchors[i] = (list_others_anchors[i][0],list_others_anchors[i][1],list_others_anchors[i][2])
+        box_x1 = list_others_anchors[i][1]*C.rpn_stride - (C.anchor_box_scales[list_others_anchors[i][2]//3]* C.anchor_box_ratios[list_others_anchors[i][2]%3][0])/2
+        box_x2 = list_others_anchors[i][1]*C.rpn_stride + (C.anchor_box_scales[list_others_anchors[i][2]//3]* C.anchor_box_ratios[list_others_anchors[i][2]%3][0])/2
+        box_y1 = list_others_anchors[i][0]*C.rpn_stride - (C.anchor_box_scales[list_others_anchors[i][2]//3]* C.anchor_box_ratios[list_others_anchors[i][2]%3][1])/2
+        box_y2 = list_others_anchors[i][0]*C.rpn_stride + (C.anchor_box_scales[list_others_anchors[i][2]//3]* C.anchor_box_ratios[list_others_anchors[i][2]%3][1])/2
+        if box_x1 < 0:
+            box_x1 = 0
+        if box_x2 > 1280:
+            box_x2 = 1280
+        if box_y1 < 0:
+            box_y1 = 0
+        if box_y2 > 720:
+            box_y2 = 720
+        a.append((int(box_x1),int(box_y1),int(box_x2),int(box_y2)))
 
-    return np.copy(y_rpn_cls), np.copy(y_rpn_regr), num_pos
+    return np.copy(y_rpn_cls), np.copy(y_rpn_regr), num_pos, a
 
 ############################################################
             #Get new image size and augment the image
@@ -1054,7 +1086,7 @@ def get_anchor_gt(all_img_data, C, img_length_calc_function, mode='train'):
                 x_img = cv2.resize(x_img, (resized_width, resized_height), interpolation=cv2.INTER_CUBIC)
                 debug_img = x_img.copy()
                 try:
-                    y_rpn_cls, y_rpn_regr, num_pos = calc_rpn(C, img_data_aug, width, height, resized_width, resized_height, img_length_calc_function,mode)
+                    y_rpn_cls, y_rpn_regr, num_pos, list_others = calc_rpn(C, img_data_aug, width, height, resized_width, resized_height, img_length_calc_function,mode)
                 except Exception as e:
                     exc_type, exc_obj, exc_tb = sys.exc_info()
                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -1078,7 +1110,7 @@ def get_anchor_gt(all_img_data, C, img_length_calc_function, mode='train'):
                 y_rpn_cls = np.transpose(y_rpn_cls, (0, 2, 3, 1))
                 y_rpn_regr = np.transpose(y_rpn_regr, (0, 2, 3, 1))
 
-                yield np.copy(x_img), [np.copy(y_rpn_cls), np.copy(y_rpn_regr)], img_data_aug, debug_img, num_pos
+                yield np.copy(x_img), [np.copy(y_rpn_cls), np.copy(y_rpn_regr)], img_data_aug, debug_img, num_pos, list_others
 
             except Exception as e:
                 print(e)
@@ -1162,7 +1194,7 @@ def non_max_suppression_fast(boxes, probs, overlap_thresh=0.9, max_boxes=300):
     #   Step 3: Calculate the IoU with 'Last' box and other boxes in the list. If the IoU is larger than overlap_threshold, delete the box from list
     #   Step 4: Repeat step 2 and step 3 until there is no item in the probs list 
     if len(boxes) == 0:
-        return []
+        return [],[]
 
     # grab the coordinates of the bounding boxes
     x1 = boxes[:, 0]
@@ -1739,25 +1771,6 @@ def get_testing_batch_classifier(C, X2_test, Y1_test, Y2_test, mode, k):
                     #Test all epochs
 ############################################################
 
-def get_pig_accuracy_from_confusion_matrix(m,classes_count):
-    tp = m[0,0]
-    fp = 0
-    for i in range (1,len(classes_count)):
-        fp = fp + m[0,i]
-
-    fn = 0
-    for i in range (1,len(classes_count)):
-        fn = fn + m[i,0]
-
-    tn = 0
-    for i in range (1,len(classes_count)):
-        for j in range (1,len(classes_count)):
-            tn = tn + m[i,j]
-    
-    acc = (tp + tn) / (tp + fn + fp + tn)
-    return int(tp), int(fp), int(fn), int(tn), acc
-
-### RPN
 
 def compare_rpn_to_groundtruth(groundtruth_boxes, detection_boxes, num_boxes=300):
     confusion_matrix = np.zeros((2,3))
@@ -1888,6 +1901,7 @@ def compare_detection_to_groundtruth(groundtruth_boxes, detection_boxes, iou_min
 
 def get_detections_boxes(Y, C, class_mapping):
     bboxes = []
+    probs = []
     # class_mapping = {v: k for k, v in class_mapping.items()}
     for i in range(len(Y)):
         (x, y, w, h) = Y[i][0]
@@ -1905,8 +1919,9 @@ def get_detections_boxes(Y, C, class_mapping):
         y2 = C.rpn_stride*(y+h)
 
         if cls_name == 0:
-            bboxes.append( ( [x1,y1,x2,y2], cls_name, Y[i][1][np.argmax(Y[i][1])] ) )
-    return bboxes
+            probs.append(Y[i][1][np.argmax(Y[i][1])])
+            bboxes.append([x1,y1,x2,y2])
+    return bboxes, probs
 
 def get_average_precision(all_det,groundtruth_boxes,iou_min):
     
