@@ -373,12 +373,16 @@ for epoch_num in range(num_epochs):
             R_rpn_nms, probs_nms = non_max_suppression_fast(R_train,probs,overlap_thresh=0.45)
             # Get all boxes in list
             all_det_rpn = []
-            for i in range(R_rpn_nms.shape[0]):
-                if probs_nms[i] > 0.5:
-                    all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
-            # Calcul average precision with groundtruth
-            ap_rpn_train50 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.50)
-            ap_rpn_train75 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.75)
+            if R_rpn_nms:
+                for i in range(R_rpn_nms.shape[0]):
+                    if probs_nms[i] > 0.5:
+                        all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
+                # Calcul average precision with groundtruth
+                ap_rpn_train50 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.50)
+                ap_rpn_train75 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.75)
+            else:
+                ap_rpn_train50 = 0
+                ap_rpn_train75 = 0
             # note: calc_iou converts from (x1,y1,x2,y2) to (x,y,w,h) format
             # X2: bboxes that iou > C.classifier_min_overlap for all gt bboxes in 300 non_max_suppression bboxes
             # Y1: one hot code for bboxes from above => x_roi (X)
@@ -452,12 +456,15 @@ for epoch_num in range(num_epochs):
             probs = np.asarray(probs)
             bboxes, probs = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
             all_det = []
-
-            for i in range(bboxes.shape[0]):
-                if probs[i] > 0.5:          
-                    all_det.append((bboxes[i],0,probs[i]))
-            ap_detect_train50 = get_average_precision(all_det,img_data_train['bboxes'],0.50)
-            ap_detect_train75 = get_average_precision(all_det,img_data_train['bboxes'],0.75)
+            if bboxes:
+                for i in range(bboxes.shape[0]):
+                    if probs[i] > 0.5:          
+                        all_det.append((bboxes[i],0,probs[i]))
+                ap_detect_train50 = get_average_precision(all_det,img_data_train['bboxes'],0.50)
+                ap_detect_train75 = get_average_precision(all_det,img_data_train['bboxes'],0.75)
+            else :
+                ap_detect_train50 = 0
+                ap_detect_train75 = 0
             #detection_confusion_matrix = compare_detection_to_groundtruth(img_dataf_label['bboxes'], all_dets)
 
             # Loss rpn  
@@ -545,6 +552,7 @@ for epoch_num in range(num_epochs):
                                     'ap_detect50':round(ap_detect_train50,3),
                                     'ap_detect75':round(ap_detect_train75,3)
                                     }  
+
                 for num_image in range (len(test_imgs)):  
                     print("epoch {}, test image {}/{} processed".format(epoch_num, num_image+1,len(test_imgs)))
                     # Generate X (x_img) and label Y ([y_rpn_cls, y_rpn_regr])
@@ -557,12 +565,16 @@ for epoch_num in range(num_epochs):
                     R_test,probs = rpn_to_roi(P_rpn_test[0], P_rpn_test[1], C, K.common.image_dim_ordering(), use_regr=True, overlap_thresh=0.7, max_boxes=300)  
                     R_rpn_nms, probs_nms = non_max_suppression_fast(R_test,probs,overlap_thresh=0.45)
                     all_det_rpn = []
-                    for i in range(R_rpn_nms.shape[0]):
-                        if probs_nms[i] > 0.5:
-                            all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
-                    # Calcul average precision with groundtruth
-                    ap_rpn_test50 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.50)
-                    ap_rpn_test75 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.75)
+                    if R_rpn_nms:
+                        for i in range(R_rpn_nms.shape[0]):
+                            if probs_nms[i] > 0.5:
+                                all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
+                        # Calcul average precision with groundtruth
+                        ap_rpn_test50 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.50)
+                        ap_rpn_test75 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.75)
+                    else:
+                        ap_rpn_test50 = 0
+                        ap_rpn_test75 = 0
                     # note: calc_iou converts from (x1,y1,x2,y2) to (x,y,w,h) format
                     # X2: bboxes that iou > C.classifier_min_overlap for all gt bboxes in 300 non_max_suppression bboxes
                     # Y1: one hot code for bboxes from above => x_roi (X)
@@ -606,13 +618,16 @@ for epoch_num in range(num_epochs):
                     probs = np.asarray(probs)
                     bboxes, probs = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
                     all_det = []
+                    if bboxes:
+                        for i in range(bboxes.shape[0]):
+                            if probs[i] > 0.5:          
+                                all_det.append((bboxes[i],0,probs[i]))
 
-                    for i in range(bboxes.shape[0]):
-                        if probs[i] > 0.5:          
-                            all_det.append((bboxes[i],0,probs[i]))
-
-                    ap_detect_test50 = get_average_precision(all_det,img_data_train['bboxes'],0.50)
-                    ap_detect_test75 = get_average_precision(all_det,img_data_train['bboxes'],0.75)
+                        ap_detect_test50 = get_average_precision(all_det,img_data_train['bboxes'],0.50)
+                        ap_detect_test75 = get_average_precision(all_det,img_data_train['bboxes'],0.75)
+                    else:
+                        ap_detect_test50 = 0
+                        ap_detect_test75 = 0
             
                     #print(class_confusion_matrix_test)
                     # Loss rpn  
