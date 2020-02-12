@@ -46,6 +46,10 @@ axs[1].set_title('Mean Overlap',color='black')
 axs[2].set_title('Classification',color='black')
 axs[3].set_title('Detection',color='black')
 
+axs[0].ylim(0,1)
+axs[2].ylim(0,1)
+axs[3].ylim(0,1)
+
 ### RPN
 
 recall_rpn_test = get_rpn_recall(record_test)
