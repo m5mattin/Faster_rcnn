@@ -192,12 +192,12 @@ axs[3].plot(    np.arange(0, r_epochs),
 axs[3].plot(    np.arange(0, r_epochs), 
                 record_train['ap_detect50'],
                 label='train set: ap50',
-                color=colors['darkgreen'])
+                color=colors['chocolate'])
 
 axs[3].plot(    np.arange(0, r_epochs), 
                 record_test['ap_detect50'],
                 label='test set: ap50',
-                color=colors['darkgreen'],
+                color=colors['chocolate'],
                 linestyle=':')
 
 axs[3].plot(    np.arange(0, r_epochs), 
