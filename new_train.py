@@ -570,8 +570,8 @@ for epoch_num in range(num_epochs):
                             if probs_nms[i] > 0.5:
                                 all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
                         # Calcul average precision with groundtruth
-                        ap_rpn_test50 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.50)
-                        ap_rpn_test75 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.75)
+                        ap_rpn_test50 = get_average_precision(all_det_rpn,img_data_test['bboxes'],0.50)
+                        ap_rpn_test75 = get_average_precision(all_det_rpn,img_data_test['bboxes'],0.75)
                     else:
                         ap_rpn_test50 = 0
                         ap_rpn_test75 = 0
@@ -613,7 +613,7 @@ for epoch_num in range(num_epochs):
                             class_confusion_matrix_test[class_predicted, class_gt] = class_confusion_matrix_test[class_predicted, class_gt] + 1
                             Y_detection_test.append( (X2_test[:, sel_samples[i], :][0], P_cls[0][i], P_regr[0][i]))
                     
-                    bboxes, probs = get_detections_boxes(Y_detection_train, C, class_mapping)
+                    bboxes, probs = get_detections_boxes(Y_detection_test, C, class_mapping)
                     bboxes = np.asarray(bboxes)
                     probs = np.asarray(probs)
                     bboxes, probs, valid = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
@@ -623,8 +623,8 @@ for epoch_num in range(num_epochs):
                             if probs[i] > 0.5:          
                                 all_det.append((bboxes[i],0,probs[i]))
 
-                        ap_detect_test50 = get_average_precision(all_det,img_data_train['bboxes'],0.50)
-                        ap_detect_test75 = get_average_precision(all_det,img_data_train['bboxes'],0.75)
+                        ap_detect_test50 = get_average_precision(all_det,img_data_test['bboxes'],0.50)
+                        ap_detect_test75 = get_average_precision(all_det,img_data_test['bboxes'],0.75)
                     else:
                         ap_detect_test50 = 0
                         ap_detect_test75 = 0

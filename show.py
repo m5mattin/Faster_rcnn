@@ -57,7 +57,7 @@ axs[0].plot(    np.arange(0, r_epochs),
                 color=colors['chocolate'])
 axs[0].plot(    np.arange(0, r_epochs), 
                 record_train['ap_rpn75'],
-                label='train set: ap50',
+                label='train set: ap75',
                 color=colors['darkred'])
 
 axs[0].plot(    np.arange(0, r_epochs), 
@@ -160,19 +160,20 @@ axs[2].plot(    np.arange(0, r_epochs),
                 color=colors['darkred'],
                 linestyle=':')
 
-axs[2].plot(    np.arange(0, r_epochs), 
-                precision_class_test,
-                label='val set: precision_class_test',
-                color=colors['darkviolet'],
-                linestyle=':')
+# axs[2].plot(    np.arange(0, r_epochs), 
+#                 precision_class_test,
+#                 label='val set: precision_class_test',
+#                 color=colors['darkviolet'],
+#                 linestyle=':')
 
-axs[2].plot(    np.arange(0, r_epochs), 
-                recall_class_test,
-                label='val set: recall_class_test',
-                color=colors['pink'],
-                linestyle=':')
+# axs[2].plot(    np.arange(0, r_epochs), 
+#                 recall_class_test,
+#                 label='val set: recall_class_test',
+#                 color=colors['pink'],
+#                 linestyle=':')
 
 
+# Detection
 axs[3].plot(    np.arange(0, r_epochs), 
                 record_train['curr_loss'],
                 label='train set: curr_loss',
