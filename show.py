@@ -67,7 +67,7 @@ axs[0].plot(    np.arange(0, r_epochs),
                 linestyle=":")
 
 axs[0].plot(    np.arange(0, r_epochs), 
-                record_test['ap_rpn50'],
+                record_test['ap_rpn75'],
                 label='val set: ap75',
                 color=colors['darkred'],
                 linestyle=":")
