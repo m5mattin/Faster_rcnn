@@ -190,7 +190,7 @@ train_imgs, classes_count_train, class_mapping = get_data(train_path,images_path
 test_imgs, classes_count_test, _ = get_data(test_path,images_path)
 
 class_mapping_label = class_mapping.copy()
-if mode == 'P' or mode == 'PaO' or mode == 'PaHNO' or mode == 'PaHPO':
+if mode == 'P' or mode == 'PaO' or mode == 'PaHNO' or mode == 'PaHPO' or mode == '2CHA':
     print("class_mapping was {} but because mode is {} so class_mapping is :".format(class_mapping, mode))
     class_mapping.pop('others',None)
     
@@ -358,8 +358,7 @@ for epoch_num in range(num_epochs):
             
             # Generate X (x_img) and label Y ([y_rpn_cls, y_rpn_regr])
             print("mode : {}".format(mode))
-            X_train, Y_train, img_data_train, debug_img_train, debug_num_pos_train, list_others = next(data_gen_train)
-            #print('list_others : ',list_others)
+            X_train, Y_train, img_data_train, debug_img_train, debug_num_pos_train, hard_anchors_others = next(data_gen_train)
             # Train rpn model and get loss value [_, loss_rpn_cls, loss_rpn_regr]
             loss_rpn_train = model_rpn.train_on_batch(X_train, Y_train)
             # Get predicted rpn from rpn model [rpn_cls, rpn_regr]
@@ -387,7 +386,7 @@ for epoch_num in range(num_epochs):
             # Y1: one hot code for bboxes from above => x_roi (X)
             # Y2: corresponding labels and corresponding gt bboxes
             X2_train, Y1_train, Y2_train, IouS_train, overlap_others = calc_iou(R_train, img_data_train, C, class_mapping_label)
-            
+
             # Get matches between rpn boxes and real classes (number of pig, number of others, number of neg)
             for i in range(len(Y1_train[0])):
                 j = np.where(Y1_train[0,i,:]>0)
@@ -420,12 +419,22 @@ for epoch_num in range(num_epochs):
             rpn_accuracy_rpn_monitor_train.append(len(pos_samples_train))
             rpn_accuracy_for_epoch_train.append((len(pos_samples_train)))
             
-            X2, Y1, Y2, sel_samples = get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, mode, overlap_others)
+            hard_anchors_others,_ = nms_boxes(np.asarray(hard_anchors_others))
+            
+            X2, Y1, Y2, sel_samples = get_training_batch_classifier(    C, 
+                                                                        X2_train, 
+                                                                        Y1_train, 
+                                                                        Y2_train, 
+                                                                        IouS_train, 
+                                                                        mode, 
+                                                                        overlap_others, 
+                                                                        hard_anchors_others.tolist())
+
             loss_class_train = model_classifier.train_on_batch([X_train, X2], [Y1, Y2]) 
             Y_detection_train = []
             
             #  X  => img_data resized image
-            #  X2 => num_rois (4 in here) bboxes which contains selected neg and pos
+            #  X2 => num_rois (30 in here) bboxes which contains selected neg and pos
             #  Y1 => one hot encode for num_rois bboxes which contains selected neg and pos
             #  Y2 => labels and gt bboxes for num_rois bboxes which contains selected neg and pos
            
@@ -557,7 +566,7 @@ for epoch_num in range(num_epochs):
                 for num_image in range (len(test_imgs)):  
                     print("epoch {}, test image {}/{} processed".format(epoch_num, num_image+1,len(test_imgs)))
 
-                    X_test, Y_test, img_data_test, debug_img_test, debug_num_pos_test, list_others  = next(data_gen_test)
+                    X_test, Y_test, img_data_test, debug_img_test, debug_num_pos_test, hard_anchors_others   = next(data_gen_test)
 
                     loss_rpn_test = model_rpn.test_on_batch(X_test, Y_test)
 
@@ -589,8 +598,18 @@ for epoch_num in range(num_epochs):
                         rpn_accuracy_rpn_monitor_test.append(0)
                         rpn_accuracy_for_epoch_test.append(0)
                         continue
-                    
-                    X2, Y1, Y2, sel_samples = get_training_batch_classifier(C, X2_test, Y1_test, Y2_test, IouS_test, mode, overlap_others)
+
+                    hard_anchors_others,_ = nms_boxes(np.asarray(hard_anchors_others))
+
+                    X2, Y1, Y2, sel_samples = get_training_batch_classifier(    C, 
+                                                                                X2_test, 
+                                                                                Y1_test, 
+                                                                                Y2_test, 
+                                                                                IouS_test, 
+                                                                                mode, 
+                                                                                overlap_others, 
+                                                                                hard_anchors_others.tolist())
+
                     loss_class_test = model_classifier.test_on_batch([X_test, X2], [Y1, Y2])
                     Y_detection_test = [] 
                     for k in range(int(len(Y1_test[0])//C.num_rois)):
