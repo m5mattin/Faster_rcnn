@@ -428,7 +428,7 @@ for epoch_num in range(num_epochs):
                                                                         IouS_train, 
                                                                         mode, 
                                                                         overlap_others, 
-                                                                        hard_anchors_others.tolist())
+                                                                        hard_anchors_others)
 
             loss_class_train = model_classifier.train_on_batch([X_train, X2], [Y1, Y2]) 
             Y_detection_train = []
@@ -608,7 +608,7 @@ for epoch_num in range(num_epochs):
                                                                                 IouS_test, 
                                                                                 mode, 
                                                                                 overlap_others, 
-                                                                                hard_anchors_others.tolist())
+                                                                                hard_anchors_others)
 
                     loss_class_test = model_classifier.test_on_batch([X_test, X2], [Y1, Y2])
                     Y_detection_test = [] 
