@@ -190,7 +190,7 @@ train_imgs, classes_count_train, class_mapping = get_data(train_path,images_path
 test_imgs, classes_count_test, _ = get_data(test_path,images_path)
 
 class_mapping_label = class_mapping.copy()
-if mode == 'P' or mode == 'PaO' or mode == 'PaHNO' or mode == 'PaHPO' or mode == '2CHA':
+if mode == 'P' or mode == 'PaO' or mode == 'PaHNO' or mode == 'PaHPO' or mode == '2CHA' or mode == 'HOEM':
     print("class_mapping was {} but because mode is {} so class_mapping is :".format(class_mapping, mode))
     class_mapping.pop('others',None)
     
@@ -235,7 +235,6 @@ shared_layers = nn_base(img_input, trainable=True)
 num_anchors = len(C.anchor_box_scales) * len(C.anchor_box_ratios) # 9
 rpn = rpn_layer(shared_layers, num_anchors)
 classifier = classifier_layer(shared_layers, roi_input, C.num_rois, nb_classes=len(class_mapping))
-
 model_rpn = Model(img_input, rpn[:2])
 model_classifier = Model([img_input, roi_input], classifier)
 
@@ -419,51 +418,45 @@ for epoch_num in range(num_epochs):
             rpn_accuracy_rpn_monitor_train.append(len(pos_samples_train))
             rpn_accuracy_for_epoch_train.append((len(pos_samples_train)))
             
-            hard_anchors_others,_ = nms_boxes(np.asarray(hard_anchors_others))
-            
-            X2, Y1, Y2, sel_samples = get_training_batch_classifier(    C, 
-                                                                        X2_train, 
-                                                                        Y1_train, 
-                                                                        Y2_train, 
-                                                                        IouS_train, 
-                                                                        mode, 
-                                                                        overlap_others, 
-                                                                        hard_anchors_others)
-
-            loss_class_train = model_classifier.train_on_batch([X_train, X2], [Y1, Y2]) 
+            ###### TEST ON BATCH
             Y_detection_train = []
-            
-            #  X  => img_data resized image
-            #  X2 => num_rois (30 in here) bboxes which contains selected neg and pos
-            #  Y1 => one hot encode for num_rois bboxes which contains selected neg and pos
-            #  Y2 => labels and gt bboxes for num_rois bboxes which contains selected neg and pos
-           
+            samples_cross_entropy = np.zeros((300))
             for k in range(int(len(Y1_train[0])//C.num_rois)):
                 
                 X2, Y1, Y2, sel_samples = get_testing_batch_classifier(C, X2_train, Y1_train, Y2_train, mode, k)
                 [P_cls, P_regr] = model_classifier.predict([X_train, X2])
-                
-                #Fill classification confusion matrix
+
+                for j in range(len(P_cls[0])):
+                         # Calcul loss per example
+                        samples_cross_entropy[k*C.num_rois+j] = cross_entropy(Y1[0][j], P_cls[0][j])
+                                     
+                #Fill confusion matrix for classification 
                 for i in range (len(sel_samples)):
                     class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
-                    class_predicted = int(class_predicted[0])
+                    class_predicted = int(class_predicted[0][0])
                     class_gt = np.where(Y1_train[0, sel_samples[i], :]== np.amax(Y1_train[0, sel_samples[i], :]))
                     class_gt = int(class_gt[0])
-
-                    if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
+                    
+                    if (mode != 'PaCO') :
                         if class_predicted == len(class_mapping) - 1:
                             class_predicted = class_predicted + 1
 
                     class_confusion_matrix_train[class_predicted, class_gt] = class_confusion_matrix_train[class_predicted, class_gt] + 1
                     # Save boxes with format (boxe, cls, regr)
-                    Y_detection_train.append( (X2_train[:, sel_samples[i], :][0], P_cls[0][i], P_regr[0][i]))
-
-            # get boxes its probability
+                    
+                    Y_detection_train.append( (X2_train[:, sel_samples[i], :][0], P_cls[0][i], P_regr[0][i]))  
+            # get boxes probability
             bboxes, probs = get_detections_boxes(Y_detection_train, C, class_mapping)
-            bboxes = np.asarray(bboxes)
-            probs = np.asarray(probs)
-            # NMS : 0.45
+            # Get Average precision with NMS : 0.45
             bboxes, probs, valid = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
+            print(probs)
+            # Get samples if HOEM is needed            
+            tmp = X2_train
+            tmp[:,:,0] = X2_train[0][:,0]
+            tmp[:,:,1] = X2_train[0][:,1]
+            tmp[:,:,2] = X2_train[0][:,0] +  X2_train[0][:,2]
+            tmp[:,:,3] = X2_train[0][:,1] +  X2_train[0][:,3]  
+            _,sel_samples_HOEM = nms_boxes(boxes=tmp[0],probs=samples_cross_entropy,overlap_thresh=0.5,max_boxes=30)
             all_det = []
             if valid is True:
                 for i in range(bboxes.shape[0]):
@@ -474,8 +467,18 @@ for epoch_num in range(num_epochs):
             else :
                 ap_detect_train50 = 0
                 ap_detect_train75 = 0
-            #detection_confusion_matrix = compare_detection_to_groundtruth(img_dataf_label['bboxes'], all_dets)
-
+            ###### TRAIN ON BATCH
+            hard_anchors_others,_ = nms_boxes(boxes=np.asarray(hard_anchors_others),probs=None)
+            X2, Y1, Y2, sel_samples = get_training_batch_classifier(    C=C, 
+                                                                        X2_train=X2_train, 
+                                                                        Y1_train=Y1_train, 
+                                                                        Y2_train = Y2_train, 
+                                                                        IouS_train = IouS_train, 
+                                                                        mode = mode, 
+                                                                        overlap_others = overlap_others, 
+                                                                        hard_anchors_others = hard_anchors_others,
+                                                                        sel_samples_HOEM = sel_samples_HOEM)
+            loss_class_train = model_classifier.train_on_batch([X_train,X2], [Y1,Y2]) 
             # Loss rpn  
             losses_train[iter_num, 0] = loss_rpn_train[1]
             losses_train[iter_num, 1] = loss_rpn_train[2]
@@ -593,37 +596,29 @@ for epoch_num in range(num_epochs):
                     tmp_confusion = compare_rpn_to_groundtruth(img_data_test['bboxes'],R_test*C.rpn_stride,num_boxes=300)
                     rpn_confusion_matrix_test = rpn_confusion_matrix_test + tmp_confusion
 
-
                     if X2_test is None:
                         rpn_accuracy_rpn_monitor_test.append(0)
                         rpn_accuracy_for_epoch_test.append(0)
                         continue
-
-                    hard_anchors_others,_ = nms_boxes(np.asarray(hard_anchors_others))
-
-                    X2, Y1, Y2, sel_samples = get_training_batch_classifier(    C, 
-                                                                                X2_test, 
-                                                                                Y1_test, 
-                                                                                Y2_test, 
-                                                                                IouS_test, 
-                                                                                mode, 
-                                                                                overlap_others, 
-                                                                                hard_anchors_others)
-
-                    loss_class_test = model_classifier.test_on_batch([X_test, X2], [Y1, Y2])
+                    ###### TEST ON BATCH
                     Y_detection_test = [] 
+                    samples_cross_entropy = np.zeros((300))
+
                     for k in range(int(len(Y1_test[0])//C.num_rois)):
                         
                         X2, Y1, Y2, sel_samples = get_testing_batch_classifier(C, X2_test, Y1_test, Y2_test, mode, k)
                         [P_cls, P_regr] = model_classifier.predict([X_test, X2])
-
+                        for i in range(len(P_cls[0])):
+                            # Calcul loss per example
+                            samples_cross_entropy[k*C.num_rois+i] = cross_entropy(Y1[0][i], P_cls[0][i])
+                                      
                         for i in range (len(sel_samples)):
                             class_predicted = np.where(P_cls[0][i] == np.amax(P_cls[0][i]))
-                            class_predicted = int(class_predicted[0])
+                            class_predicted = int(class_predicted[0][0])
                             class_gt = np.where(Y1_test[0, sel_samples[i], :]== np.amax(Y1_test[0, sel_samples[i], :]))
                             class_gt = int(class_gt[0])
 
-                            if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
+                            if (mode != 'PaCO') :
                                 if class_predicted == len(class_mapping) - 1:
                                     class_predicted = class_predicted + 1
 
@@ -631,9 +626,14 @@ for epoch_num in range(num_epochs):
                             Y_detection_test.append( (X2_test[:, sel_samples[i], :][0], P_cls[0][i], P_regr[0][i]))
                     
                     bboxes, probs = get_detections_boxes(Y_detection_test, C, class_mapping)
-                    bboxes = np.asarray(bboxes)
-                    probs = np.asarray(probs)
                     bboxes, probs, valid = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
+                    tmp = X2_test
+                    tmp[:,:,0] = X2_test[0][:,0]
+                    tmp[:,:,1] = X2_test[0][:,1]
+                    tmp[:,:,2] = X2_test[0][:,0] +  X2_test[0][:,2]
+                    tmp[:,:,3] = X2_test[0][:,1] +  X2_test[0][:,3]  
+                    _,sel_samples_HOEM = nms_boxes(boxes=tmp[0],probs=samples_cross_entropy,overlap_thresh=0.5,max_boxes=30)
+                    
                     all_det = []
                     if valid is True:
                         for i in range(bboxes.shape[0]):
@@ -645,7 +645,21 @@ for epoch_num in range(num_epochs):
                     else:
                         ap_detect_test50 = 0
                         ap_detect_test75 = 0
-            
+                    
+                    hard_anchors_others,_ = nms_boxes(boxes=np.asarray(hard_anchors_others),probs=None)
+
+                    X2, Y1, Y2, sel_samples = get_training_batch_classifier(    C=C, 
+                                                                                X2_train=X2_test, 
+                                                                                Y1_train=Y1_test, 
+                                                                                Y2_train = Y2_test, 
+                                                                                IouS_train = IouS_test, 
+                                                                                mode = mode, 
+                                                                                overlap_others = overlap_others, 
+                                                                                hard_anchors_others = hard_anchors_others,
+                                                                                sel_samples_HOEM = sel_samples_HOEM)
+                    loss_class_test = model_classifier.train_on_batch([X_test,X2], [Y1,Y2]) 
+                    
+                    
                     losses_test[num_image, 0] = loss_rpn_test[1]
                     losses_test[num_image, 1] = loss_rpn_test[2]
                     

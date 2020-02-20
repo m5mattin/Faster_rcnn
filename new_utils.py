@@ -659,7 +659,7 @@ def calc_rpn(C, img_data, width, height, resized_width, resized_height, img_leng
         neg = list_neg_anchors[:(C.rpn_num_train_examples-len(pos))]
 
         # Fill positives with pig / negatives with background or others
-    if (mode == 'PaO'):
+    if (mode == 'PaO') or (mode == 'HOEM'):
         if len(list_pig_anchors) <= C.rpn_num_train_examples/2:
             pos = list_pig_anchors
         elif len(list_pig_anchors) > C.rpn_num_train_examples/2:
@@ -991,7 +991,20 @@ def class_loss_regr(num_classes):
 def class_loss_cls(y_true, y_pred):
     return lambda_cls_class * K.mean(categorical_crossentropy(y_true[0, :, :], y_pred[0, :, :]))
 
-def nms_boxes(boxes, overlap_thresh=0.5, max_boxes=300):
+def cross_entropy(predictions, targets, epsilon=1e-12):
+    """
+    Computes cross entropy between targets (encoded as one-hot vectors)
+    and predictions. 
+    Input: predictions (N, k) ndarray
+        targets (N, k) ndarray        
+    Returns: scalar
+    """
+    predictions = np.clip(predictions, epsilon, 1. - epsilon)
+    N = predictions.shape[0]
+    ce = -np.sum(targets*np.log(predictions+epsilon))/N
+    return ce
+
+def nms_boxes(boxes, probs=None, overlap_thresh=0.5, max_boxes=300):
     # code used from here: http://www.pyimagesearch.com/2015/02/16/faster-non-maximum-suppression-python/
     # if there are no boxes, return an empty list
 
@@ -1000,6 +1013,7 @@ def nms_boxes(boxes, overlap_thresh=0.5, max_boxes=300):
     #   Step 2: Find the larget prob 'Last' in the list and save it to the pick list
     #   Step 3: Calculate the IoU with 'Last' box and other boxes in the list. If the IoU is larger than overlap_threshold, delete the box from list
     #   Step 4: Repeat step 2 and step 3 until there is no item in the probs list 
+    
     if len(boxes) == 0:
         return [],False
 
@@ -1008,7 +1022,6 @@ def nms_boxes(boxes, overlap_thresh=0.5, max_boxes=300):
     y1 = boxes[:, 1]
     x2 = boxes[:, 2]
     y2 = boxes[:, 3]
-
     np.testing.assert_array_less(x1, x2)
     np.testing.assert_array_less(y1, y2)
 
@@ -1025,7 +1038,11 @@ def nms_boxes(boxes, overlap_thresh=0.5, max_boxes=300):
 
     # keep looping while some indexes still remain in the indexes
     # list
-    idxs = np.arange(boxes.shape[0])
+    if probs is not None:
+        idxs = np.argsort(probs)
+    else:
+        idxs = np.arange(boxes.shape[0])
+
     while len(idxs) > 0:
         # grab the last index in the indexes list and add the
         # index value to the list of picked indexes
@@ -1061,7 +1078,7 @@ def nms_boxes(boxes, overlap_thresh=0.5, max_boxes=300):
     # return only the bounding boxes that were picked using the integer data type
     boxes = boxes[pick].astype("int")
 
-    return boxes, True
+    return boxes.tolist(), pick 
 
 def non_max_suppression_fast(boxes, probs, overlap_thresh=0.9, max_boxes=300):
     # code used from here: http://www.pyimagesearch.com/2015/02/16/faster-non-maximum-suppression-python/
@@ -1518,7 +1535,8 @@ def rpn_to_roi(rpn_layer, regr_layer, C, dim_ordering, use_regr=True, max_boxes=
 
     return result,probs
 
-def get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, mode, overlap_others, hard_anchors_others):
+
+def get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, mode, overlap_others, hard_anchors_others,  sel_samples_HOEM):
 
     bg_samples = np.where(Y1_train[0, :, -1] == 1)
     
@@ -1538,7 +1556,9 @@ def get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, m
         pig_samples = pig_samples[0].tolist()
     else:
         pig_samples = []
-    
+   
+    if (mode == 'HOEM'):
+        sel_samples = sel_samples_HOEM
     if (mode == '2CHA'):
 
         X2_hard_ha = np.zeros((1,len(hard_anchors_others),4))
@@ -1570,7 +1590,6 @@ def get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, m
         
         bg_samples = np.random.choice(bg_samples, C.num_rois-len(pig_samples)-len(others_samples)-len(ha_samples), replace=True).tolist()
         sel_samples = pig_samples + others_samples + bg_samples + ha_samples
-    
     if (mode == 'P'):
         # Remove examples wich overlap with a gt others if mode is 'P'
         for i in range (len(overlap_others)):
@@ -1620,7 +1639,7 @@ def get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, m
 
     X2 = X2_train[:,sel_samples, :]
 
-    if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO') or (mode == '2CHA'):
+    if (mode != 'PaCO') :
         Y1_train = Y1_train[:,sel_samples,:]
         Y2_train = Y2_train[:,sel_samples,:]
         Y1 = np.zeros(Y1_train[:,:,0:2].shape, dtype=int)
@@ -1643,12 +1662,11 @@ def get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, m
 
 def get_testing_batch_classifier(C, X2_test, Y1_test, Y2_test, mode, k):
     
-    
     sel_samples = []
     for i in range(C.num_rois):
         sel_samples.append(k*C.num_rois + i)
     X2 = X2_test[:,sel_samples, :]
-    if (mode == 'P') or (mode == 'PaO') or (mode == 'PaHNO') or (mode == 'PaHPO'):
+    if (mode != 'PaCO') :
         X2_test = X2_test[:,sel_samples,:]
         Y1_test = Y1_test[:,sel_samples,:]
         Y2_test = Y2_test[:,sel_samples,:]
@@ -1823,6 +1841,10 @@ def get_detections_boxes(Y, C, class_mapping):
         if cls_name == 0:
             probs.append(Y[i][1][np.argmax(Y[i][1])])
             bboxes.append([x1,y1,x2,y2])
+    
+    bboxes = np.asarray(bboxes)
+    probs = np.asarray(probs)
+
     return bboxes, probs
 
 def get_average_precision(all_det,groundtruth_boxes,iou_min):
