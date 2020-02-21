@@ -288,7 +288,7 @@ else:
                                                 'class_20', 'class_21', 'class_22',
                                                 'curr_loss','rpn_mop','rpn_moo','rpn_mob',
                                                 'ap_rpn50','ap_rpn75','ap_detect50','ap_detect75'])
-Learning_rate = 1e-5
+Learning_rate = 1e-4
 optimizer = Adam(lr=Learning_rate)
 optimizer_classifier = Adam(lr=Learning_rate)
 model_rpn.compile(optimizer=optimizer, loss=[rpn_loss_cls(num_anchors), rpn_loss_regr(num_anchors)])
@@ -453,6 +453,7 @@ for epoch_num in range(num_epochs):
             all_det = []
             if valid is True:
                 for i in range(bboxes.shape[0]):
+                    print(probs[i])
                     if probs[i] > 0:          
                         all_det.append((bboxes[i],0,probs[i]))
                 ap_detect_train50 = get_average_precision(all_det,img_data_train['bboxes'],0.50)
