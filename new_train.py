@@ -370,7 +370,7 @@ for epoch_num in range(num_epochs):
             all_det_rpn = []
             if valid is True:
                 for i in range(R_rpn_nms.shape[0]):
-                    if probs_nms[i] > 0.5:
+                    if probs_nms[i] > 0:
                         all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
                 # Calcul average precision with groundtruth
                 ap_rpn_train50 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.50)
@@ -449,27 +449,30 @@ for epoch_num in range(num_epochs):
             bboxes, probs = get_detections_boxes(Y_detection_train, C, class_mapping)
             # Get Average precision with NMS : 0.45
             bboxes, probs, valid = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
-
-            # Get samples if HOEM is needed            
-            tmp = X2_train
-            tmp[:,:,0] = X2_train[0][:,0]
-            tmp[:,:,1] = X2_train[0][:,1]
-            tmp[:,:,2] = X2_train[0][:,0] +  X2_train[0][:,2]
-            tmp[:,:,3] = X2_train[0][:,1] +  X2_train[0][:,3]  
-            _,sel_samples_HOEM = nms_boxes(boxes=tmp[0],probs=samples_cross_entropy,overlap_thresh=0.5,max_boxes=30)
+ 
             all_det = []
             if valid is True:
                 for i in range(bboxes.shape[0]):
-                    if probs[i] > 0.5:          
+                    if probs[i] > 0:          
                         all_det.append((bboxes[i],0,probs[i]))
                 ap_detect_train50 = get_average_precision(all_det,img_data_train['bboxes'],0.50)
                 ap_detect_train75 = get_average_precision(all_det,img_data_train['bboxes'],0.75)
             else :
                 ap_detect_train50 = 0
                 ap_detect_train75 = 0
-            #print(ap_detect_train50,ap_detect_train75)
+            print(ap_detect_train50,ap_detect_train75)
+            print(all_det)
             ###### TRAIN ON BATCH
+            # Get samples if HA is needed 
             hard_anchors_others,_ = nms_boxes(boxes=np.asarray(hard_anchors_others),probs=None)
+            # Get samples if HOEM is needed            
+            tmp = X2_train
+            tmp[:,:,0] = X2_train[0][:,0]
+            tmp[:,:,1] = X2_train[0][:,1]
+            tmp[:,:,2] = X2_train[0][:,0] +  X2_train[0][:,2]
+            tmp[:,:,3] = X2_train[0][:,1] +  X2_train[0][:,3]  
+            _,sel_samples_HOEM = nms_boxes(boxes=tmp[0],probs=samples_cross_entropy,overlap_thresh=0.7,max_boxes=30)
+
             X2, Y1, Y2, sel_samples = get_training_batch_classifier(    C=C, 
                                                                         X2_train=X2_train, 
                                                                         Y1_train=Y1_train, 
@@ -480,7 +483,6 @@ for epoch_num in range(num_epochs):
                                                                         hard_anchors_others = hard_anchors_others,
                                                                         sel_samples_HOEM = sel_samples_HOEM)
             
-            get_compo_batch(X2_train, Y1_train, Y2_train,sel_samples_HOEM)
 
             loss_class_train = model_classifier.train_on_batch([X_train,X2], [Y1,Y2]) 
             # Loss rpn  
@@ -584,7 +586,7 @@ for epoch_num in range(num_epochs):
                     all_det_rpn = []
                     if valid is True:
                         for i in range(R_rpn_nms.shape[0]):
-                            if probs_nms[i] > 0.5:
+                            if probs_nms[i] > 0:
                                 all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
 
                         ap_rpn_test50 = get_average_precision(all_det_rpn,img_data_test['bboxes'],0.50)
@@ -631,17 +633,10 @@ for epoch_num in range(num_epochs):
                     
                     bboxes, probs = get_detections_boxes(Y_detection_test, C, class_mapping)
                     bboxes, probs, valid = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
-                    tmp = X2_test
-                    tmp[:,:,0] = X2_test[0][:,0]
-                    tmp[:,:,1] = X2_test[0][:,1]
-                    tmp[:,:,2] = X2_test[0][:,0] +  X2_test[0][:,2]
-                    tmp[:,:,3] = X2_test[0][:,1] +  X2_test[0][:,3]  
-                    _,sel_samples_HOEM = nms_boxes(boxes=tmp[0],probs=samples_cross_entropy,overlap_thresh=0.5,max_boxes=30)
-                    
                     all_det = []
                     if valid is True:
                         for i in range(bboxes.shape[0]):
-                            if probs[i] > 0.5:          
+                            if probs[i] > 0:          
                                 all_det.append((bboxes[i],0,probs[i]))
 
                         ap_detect_test50 = get_average_precision(all_det,img_data_test['bboxes'],0.50)
@@ -651,7 +646,12 @@ for epoch_num in range(num_epochs):
                         ap_detect_test75 = 0
                     
                     hard_anchors_others,_ = nms_boxes(boxes=np.asarray(hard_anchors_others),probs=None)
-
+                    tmp = X2_test
+                    tmp[:,:,0] = X2_test[0][:,0]
+                    tmp[:,:,1] = X2_test[0][:,1]
+                    tmp[:,:,2] = X2_test[0][:,0] +  X2_test[0][:,2]
+                    tmp[:,:,3] = X2_test[0][:,1] +  X2_test[0][:,3]  
+                    _,sel_samples_HOEM = nms_boxes(boxes=tmp[0],probs=samples_cross_entropy,overlap_thresh=0.7,max_boxes=30)
                     X2, Y1, Y2, sel_samples = get_training_batch_classifier(    C=C, 
                                                                                 X2_train=X2_test, 
                                                                                 Y1_train=Y1_test, 
