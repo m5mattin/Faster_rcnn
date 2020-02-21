@@ -417,7 +417,7 @@ for epoch_num in range(num_epochs):
                 pos_samples_train = []
             rpn_accuracy_rpn_monitor_train.append(len(pos_samples_train))
             rpn_accuracy_for_epoch_train.append((len(pos_samples_train)))
-            
+
             ###### TEST ON BATCH
             Y_detection_train = []
             samples_cross_entropy = np.zeros((300))
@@ -449,11 +449,9 @@ for epoch_num in range(num_epochs):
             bboxes, probs = get_detections_boxes(Y_detection_train, C, class_mapping)
             # Get Average precision with NMS : 0.45
             bboxes, probs, valid = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
-            print(valid)
             all_det = []
             if valid is True:
                 for i in range(bboxes.shape[0]):
-                    print(probs[i])
                     if probs[i] > 0:          
                         all_det.append((bboxes[i],0,probs[i]))
                 ap_detect_train50 = get_average_precision(all_det,img_data_train['bboxes'],0.50)
@@ -461,17 +459,16 @@ for epoch_num in range(num_epochs):
             else :
                 ap_detect_train50 = 0
                 ap_detect_train75 = 0
-            print(ap_detect_train50,ap_detect_train75)
-            #print(all_det)
             ###### TRAIN ON BATCH
             # Get samples if HA is needed 
             hard_anchors_others,_ = nms_boxes(boxes=np.asarray(hard_anchors_others),probs=None)
+            
             # Get samples if HOEM is needed            
-            tmp = X2_train
-            tmp[:,:,0] = X2_train[0][:,0]
-            tmp[:,:,1] = X2_train[0][:,1]
-            tmp[:,:,2] = X2_train[0][:,0] +  X2_train[0][:,2]
-            tmp[:,:,3] = X2_train[0][:,1] +  X2_train[0][:,3]  
+            tmp = X2_train.copy()
+            tmp[:,:,0] = X2_train[0][:,0].copy()
+            tmp[:,:,1] = X2_train[0][:,1].copy()
+            tmp[:,:,2] = X2_train[0][:,0].copy() +  X2_train[0][:,2].copy()
+            tmp[:,:,3] = X2_train[0][:,1].copy() +  X2_train[0][:,3].copy() 
             _,sel_samples_HOEM = nms_boxes(boxes=tmp[0],probs=samples_cross_entropy,overlap_thresh=0.7,max_boxes=30)
 
             X2, Y1, Y2, sel_samples = get_training_batch_classifier(    C=C, 
@@ -484,6 +481,8 @@ for epoch_num in range(num_epochs):
                                                                         hard_anchors_others = hard_anchors_others,
                                                                         sel_samples_HOEM = sel_samples_HOEM)
             
+            # for i in range(len(X2[0])):
+            #     print(i,X2[0][i],Y1[0][i])
 
             loss_class_train = model_classifier.train_on_batch([X_train,X2], [Y1,Y2]) 
             # Loss rpn  
@@ -647,11 +646,11 @@ for epoch_num in range(num_epochs):
                         ap_detect_test75 = 0
                     
                     hard_anchors_others,_ = nms_boxes(boxes=np.asarray(hard_anchors_others),probs=None)
-                    tmp = X2_test
-                    tmp[:,:,0] = X2_test[0][:,0]
-                    tmp[:,:,1] = X2_test[0][:,1]
-                    tmp[:,:,2] = X2_test[0][:,0] +  X2_test[0][:,2]
-                    tmp[:,:,3] = X2_test[0][:,1] +  X2_test[0][:,3]  
+                    tmp = X2_test.copy()
+                    tmp[:,:,0] = X2_test[0][:,0].copy()
+                    tmp[:,:,1] = X2_test[0][:,1].copy()
+                    tmp[:,:,2] = X2_test[0][:,0].copy() +  X2_test[0][:,2].copy()
+                    tmp[:,:,3] = X2_test[0][:,1].copy() +  X2_test[0][:,3].copy() 
                     _,sel_samples_HOEM = nms_boxes(boxes=tmp[0],probs=samples_cross_entropy,overlap_thresh=0.7,max_boxes=30)
                     X2, Y1, Y2, sel_samples = get_training_batch_classifier(    C=C, 
                                                                                 X2_train=X2_test, 

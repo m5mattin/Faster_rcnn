@@ -1574,11 +1574,12 @@ def get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, m
         others_samples = []
     # get pig sample
     pig_samples = np.where(Y1_train[0, :, -3] == 1)
+
     if len(pig_samples) > 0:
         pig_samples = pig_samples[0].tolist()
     else:
         pig_samples = []
-   
+    
     if (mode == 'HOEM'):
         sel_samples = sel_samples_HOEM
     if (mode == '2CHA'):
@@ -1591,8 +1592,8 @@ def get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, m
         for i in range(len(hard_anchors_others)):
             X2_hard_ha[0,i] = ( int (hard_anchors_others[i][0]/C.rpn_stride),
                                 int(hard_anchors_others[i][1]/C.rpn_stride),
-                                int(hard_anchors_others[i][2]/C.rpn_stride),
-                                int(hard_anchors_others[i][3]/C.rpn_stride))
+                                int(int(hard_anchors_others[i][2]/C.rpn_stride)-int (hard_anchors_others[i][0]/C.rpn_stride)),
+                                int(int(hard_anchors_others[i][3]/C.rpn_stride)-int(hard_anchors_others[i][1]/C.rpn_stride)))
             Y1_hard_ha[0,i] = (0,1,0)
             Y2_hard_ha[0,i] = np.zeros((16))
         
