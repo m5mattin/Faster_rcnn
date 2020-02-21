@@ -370,7 +370,7 @@ for epoch_num in range(num_epochs):
             all_det_rpn = []
             if valid is True:
                 for i in range(R_rpn_nms.shape[0]):
-                    if probs_nms[i] > 0:
+                    if probs_nms[i] > 0.5:
                         all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
                 # Calcul average precision with groundtruth
                 ap_rpn_train50 = get_average_precision(all_det_rpn,img_data_train['bboxes'],0.50)
@@ -452,7 +452,7 @@ for epoch_num in range(num_epochs):
             all_det = []
             if valid is True:
                 for i in range(bboxes.shape[0]):
-                    if probs[i] > 0:          
+                    if probs[i] > 0.5:          
                         all_det.append((bboxes[i],0,probs[i]))
                 ap_detect_train50 = get_average_precision(all_det,img_data_train['bboxes'],0.50)
                 ap_detect_train75 = get_average_precision(all_det,img_data_train['bboxes'],0.75)
@@ -586,7 +586,7 @@ for epoch_num in range(num_epochs):
                     all_det_rpn = []
                     if valid is True:
                         for i in range(R_rpn_nms.shape[0]):
-                            if probs_nms[i] > 0:
+                            if probs_nms[i] > 0.5:
                                 all_det_rpn.append((R_rpn_nms[i]* C.rpn_stride ,0,probs_nms[i]))
 
                         ap_rpn_test50 = get_average_precision(all_det_rpn,img_data_test['bboxes'],0.50)
@@ -636,7 +636,7 @@ for epoch_num in range(num_epochs):
                     all_det = []
                     if valid is True:
                         for i in range(bboxes.shape[0]):
-                            if probs[i] > 0:          
+                            if probs[i] > 0.5:          
                                 all_det.append((bboxes[i],0,probs[i]))
 
                         ap_detect_test50 = get_average_precision(all_det,img_data_test['bboxes'],0.50)
