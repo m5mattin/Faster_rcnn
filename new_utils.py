@@ -1536,6 +1536,28 @@ def rpn_to_roi(rpn_layer, regr_layer, C, dim_ordering, use_regr=True, max_boxes=
     return result,probs
 
 
+def get_compo_batch(X2_train, Y1_train, Y2_train,sel_samples_HOEM):
+    
+    bg_samples = np.where(Y1_train[0, :, -1] == 1)
+    
+    if len(bg_samples) > 0:
+        bg_samples = bg_samples[0].tolist()
+    else:
+        bg_samples = []
+    # get others exemple
+    others_samples = np.where(Y1_train[0, :, -2] == 1)
+    if len(others_samples) > 0:
+        others_samples = others_samples[0].tolist()
+    else:
+        others_samples = []
+    # get pig sample
+    pig_samples = np.where(Y1_train[0, :, -3] == 1)
+    if len(pig_samples) > 0:
+        pig_samples = pig_samples[0].tolist()
+    else:
+        pig_samples = []
+    #print(len(pig_samples),len(others_samples),len(bg_samples))
+
 def get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, mode, overlap_others, hard_anchors_others,  sel_samples_HOEM):
 
     bg_samples = np.where(Y1_train[0, :, -1] == 1)
@@ -1590,6 +1612,7 @@ def get_training_batch_classifier(C, X2_train, Y1_train, Y2_train, IouS_train, m
         
         bg_samples = np.random.choice(bg_samples, C.num_rois-len(pig_samples)-len(others_samples)-len(ha_samples), replace=True).tolist()
         sel_samples = pig_samples + others_samples + bg_samples + ha_samples
+    
     if (mode == 'P'):
         # Remove examples wich overlap with a gt others if mode is 'P'
         for i in range (len(overlap_others)):

@@ -190,7 +190,7 @@ train_imgs, classes_count_train, class_mapping = get_data(train_path,images_path
 test_imgs, classes_count_test, _ = get_data(test_path,images_path)
 
 class_mapping_label = class_mapping.copy()
-if mode == 'P' or mode == 'PaO' or mode == 'PaHNO' or mode == 'PaHPO' or mode == '2CHA' or mode == 'HOEM':
+if mode != 'PaCO':
     print("class_mapping was {} but because mode is {} so class_mapping is :".format(class_mapping, mode))
     class_mapping.pop('others',None)
     
@@ -449,7 +449,7 @@ for epoch_num in range(num_epochs):
             bboxes, probs = get_detections_boxes(Y_detection_train, C, class_mapping)
             # Get Average precision with NMS : 0.45
             bboxes, probs, valid = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
-            print(probs)
+
             # Get samples if HOEM is needed            
             tmp = X2_train
             tmp[:,:,0] = X2_train[0][:,0]
@@ -467,6 +467,7 @@ for epoch_num in range(num_epochs):
             else :
                 ap_detect_train50 = 0
                 ap_detect_train75 = 0
+            #print(ap_detect_train50,ap_detect_train75)
             ###### TRAIN ON BATCH
             hard_anchors_others,_ = nms_boxes(boxes=np.asarray(hard_anchors_others),probs=None)
             X2, Y1, Y2, sel_samples = get_training_batch_classifier(    C=C, 
@@ -478,6 +479,9 @@ for epoch_num in range(num_epochs):
                                                                         overlap_others = overlap_others, 
                                                                         hard_anchors_others = hard_anchors_others,
                                                                         sel_samples_HOEM = sel_samples_HOEM)
+            
+            get_compo_batch(X2_train, Y1_train, Y2_train,sel_samples_HOEM)
+
             loss_class_train = model_classifier.train_on_batch([X_train,X2], [Y1,Y2]) 
             # Loss rpn  
             losses_train[iter_num, 0] = loss_rpn_train[1]
@@ -657,7 +661,7 @@ for epoch_num in range(num_epochs):
                                                                                 overlap_others = overlap_others, 
                                                                                 hard_anchors_others = hard_anchors_others,
                                                                                 sel_samples_HOEM = sel_samples_HOEM)
-                    loss_class_test = model_classifier.train_on_batch([X_test,X2], [Y1,Y2]) 
+                    loss_class_test = model_classifier.test_on_batch([X_test,X2], [Y1,Y2]) 
                     
                     
                     losses_test[num_image, 0] = loss_rpn_test[1]
