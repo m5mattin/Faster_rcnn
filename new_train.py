@@ -288,7 +288,7 @@ else:
                                                 'class_20', 'class_21', 'class_22',
                                                 'curr_loss','rpn_mop','rpn_moo','rpn_mob',
                                                 'ap_rpn50','ap_rpn75','ap_detect50','ap_detect75'])
-Learning_rate = 1e-4
+Learning_rate = 1e-5
 optimizer = Adam(lr=Learning_rate)
 optimizer_classifier = Adam(lr=Learning_rate)
 model_rpn.compile(optimizer=optimizer, loss=[rpn_loss_cls(num_anchors), rpn_loss_regr(num_anchors)])
@@ -449,7 +449,7 @@ for epoch_num in range(num_epochs):
             bboxes, probs = get_detections_boxes(Y_detection_train, C, class_mapping)
             # Get Average precision with NMS : 0.45
             bboxes, probs, valid = non_max_suppression_fast(bboxes,probs,overlap_thresh=0.45)
- 
+            print(valid)
             all_det = []
             if valid is True:
                 for i in range(bboxes.shape[0]):
@@ -461,7 +461,7 @@ for epoch_num in range(num_epochs):
                 ap_detect_train50 = 0
                 ap_detect_train75 = 0
             print(ap_detect_train50,ap_detect_train75)
-            print(all_det)
+            #print(all_det)
             ###### TRAIN ON BATCH
             # Get samples if HA is needed 
             hard_anchors_others,_ = nms_boxes(boxes=np.asarray(hard_anchors_others),probs=None)
