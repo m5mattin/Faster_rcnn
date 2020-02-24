@@ -292,8 +292,8 @@ Learning_rate = 1e-4
 optimizer = Adam(lr=Learning_rate)
 optimizer_classifier = Adam(lr=Learning_rate)
 model_rpn.compile(optimizer=optimizer, loss=[rpn_loss_cls(num_anchors), rpn_loss_regr(num_anchors)])
-
 model_classifier.compile(optimizer=optimizer_classifier, loss=[class_loss_cls, class_loss_regr(len(class_mapping)-1)], metrics=["accuracy"])
+
 model_all.compile(optimizer='sgd', loss='mae')
 
 # Training setting
@@ -330,11 +330,11 @@ for epoch_num in range(num_epochs):
 
     progbar_train = generic_utils.Progbar(epoch_length)
     print('Epoch {}/{}'.format(r_epochs + 1, total_epochs))
-    if (epoch_num+1) % 20 == 0:
-        print('Reduce current learning rate by 10. \nCurrent learning rate = ',  Learning_rate, '\nNew learning rate = ', Learning_rate/10)
-        Learning_rate = Learning_rate/10
-        K.set_value(model_rpn.optimizer.lr, Learning_rate)
-        K.set_value(model_classifier.optimizer.lr, Learning_rate)  
+    # if (epoch_num+1) % 20 == 0:
+    #     print('Reduce current learning rate by 10. \nCurrent learning rate = ',  Learning_rate, '\nNew learning rate = ', Learning_rate/10)
+    #     Learning_rate = Learning_rate/10
+    #     K.set_value(model_rpn.optimizer.lr, Learning_rate)
+    #     K.set_value(model_classifier.optimizer.lr, Learning_rate)  
     
     r_epochs += 1
     st_step = time.time()
