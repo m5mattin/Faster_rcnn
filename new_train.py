@@ -289,8 +289,10 @@ else:
                                                 'curr_loss','rpn_mop','rpn_moo','rpn_mob',
                                                 'ap_rpn50','ap_rpn75','ap_detect50','ap_detect75'])
 Learning_rate = 1e-4
-optimizer = Adam(lr=Learning_rate)
-optimizer_classifier = Adam(lr=Learning_rate)
+# optimizer = Adam(lr=Learning_rate)
+# optimizer_classifier = Adam(lr=Learning_rate)
+optimizer = SGD(lr=Learning_rate)
+optimizer_classifier = SGD(lr=Learning_rate)
 model_rpn.compile(optimizer=optimizer, loss=[rpn_loss_cls(num_anchors), rpn_loss_regr(num_anchors)])
 model_classifier.compile(optimizer=optimizer_classifier, loss=[class_loss_cls, class_loss_regr(len(class_mapping)-1)], metrics=["accuracy"])
 

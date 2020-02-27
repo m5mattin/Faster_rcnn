@@ -1155,6 +1155,90 @@ def non_max_suppression_fast(boxes, probs, overlap_thresh=0.9, max_boxes=300):
 
     return boxes, probs, True
 
+
+def non_max_suppression_fast_iiou(boxes, probs, overlap_thresh=0.9, max_boxes=300):
+    # code used from here: http://www.pyimagesearch.com/2015/02/16/faster-non-maximum-suppression-python/
+    # if there are no boxes, return an empty list
+
+    # Process explanation:
+    #   Step 1: Sort the probs list
+    #   Step 2: Find the larget prob 'Last' in the list and save it to the pick list
+    #   Step 3: Calculate the IoU with 'Last' box and other boxes in the list. If the IoU is larger than overlap_threshold, delete the box from list
+    #   Step 4: Repeat step 2 and step 3 until there is no item in the probs list 
+    if len(boxes) == 0:
+        return 0,0,False
+
+    # grab the coordinates of the bounding boxes
+    x1 = boxes[:, 0]
+    y1 = boxes[:, 1]
+    x2 = boxes[:, 2]
+    y2 = boxes[:, 3]
+
+    np.testing.assert_array_less(x1, x2)
+    np.testing.assert_array_less(y1, y2)
+
+    # if the bounding boxes integers, convert them to floats --
+    # this is important since we'll be doing a bunch of divisions
+    if boxes.dtype.kind == "i":
+        boxes = boxes.astype("float")
+
+    # initialize the list of picked indexes	
+    pick = []
+
+    # calculate the areas
+    area = (x2 - x1) * (y2 - y1)
+
+    # sort the bounding boxes 
+    idxs = np.argsort(probs)
+
+    # keep looping while some indexes still remain in the indexes
+    # list
+    while len(idxs) > 0:
+        # grab the last index in the indexes list and add the
+        # index value to the list of picked indexes
+        last = len(idxs) - 1
+        i = idxs[last]
+        pick.append(i)
+
+        # find the intersection
+        xx1_min_area = np.min(x1[i], x1[idxs[:last]])
+        yy1_min_area = np.min(y1[i], y1[idxs[:last]])
+        xx2_min_area = np.max(x2[i], x2[idxs[:last]])
+        yy2_min_area= np.max(y2[i], y2[idxs[:last]])
+        min_area = abs((xx2_min_area-xx1_min_area)*(yy2_min_area-yy1_min_area))
+
+
+        xx1_int = np.maximum(x1[i], x1[idxs[:last]])
+        yy1_int = np.maximum(y1[i], y1[idxs[:last]])
+        xx2_int = np.minimum(x2[i], x2[idxs[:last]])
+        yy2_int = np.minimum(y2[i], y2[idxs[:last]])
+
+        ww_int = np.maximum(0, xx2_int - xx1_int)
+        hh_int = np.maximum(0, yy2_int - yy1_int)
+
+        area_int = ww_int * hh_int
+
+        # find the union
+        area_union = area[i] + area[idxs[:last]] - area_int
+
+        # compute the ratio of overlap
+        iou = area_int/(area_union + 1e-6)
+
+        overlap = iou - ((min_area-area_union)/min_area)
+
+        # delete all indexes from the index list that have
+        idxs = np.delete(idxs, np.concatenate(([last],
+            np.where(overlap > overlap_thresh)[0])))
+
+        if len(pick) >= max_boxes:
+            break
+
+    # return only the bounding boxes that were picked using the integer data type
+    boxes = boxes[pick].astype("int")
+    probs = probs[pick]
+
+    return boxes, probs, True
+
 def apply_regr_np(X, T):
     """Apply regression layer to all anchors in one feature map
 
@@ -1714,48 +1798,14 @@ def get_testing_batch_classifier(C, X2_test, Y1_test, Y2_test, mode, k):
 ############################################################
                     #Test all epochs
 ############################################################
-
-
-def compare_rpn_to_groundtruth(groundtruth_boxes, detection_boxes, num_boxes=300):
-    confusion_matrix = np.zeros((2,3))
-
-    for i in range(len(groundtruth_boxes)):
-        detected = False
-        groundtruth_boxe = [    groundtruth_boxes[i]['x1'],
-                                groundtruth_boxes[i]['y1'],
-                                groundtruth_boxes[i]['x2'],
-                                groundtruth_boxes[i]['y2']]
-        groundtruth_classe = groundtruth_boxes[i]['class'] 
-        for j in range(len(detection_boxes)):
-            curr_iou = iou(groundtruth_boxe,detection_boxes[j])
-            if curr_iou >= 0.5:
-                detected = True
-                break
-        if detected == True:
-            if groundtruth_classe == 'pig':
-                confusion_matrix[0,0] = confusion_matrix[0,0] + 1
-            if groundtruth_classe == 'others':
-                confusion_matrix[0,1] = confusion_matrix[0,1] + 1
-        else:
-            if groundtruth_classe == 'pig':
-                confusion_matrix[1,0] = confusion_matrix[1,0] + 1
-            if groundtruth_classe == 'others':
-                confusion_matrix[1,1] = confusion_matrix[1,1] + 1
+def compare_detection_to_groundtruth(groundtruth_boxes, boxes, probs, iou_min=0.5, score_min=0):
     
-    confusion_matrix[0,2] = num_boxes - confusion_matrix[0,0] - confusion_matrix[0,1] - confusion_matrix[1,0] - confusion_matrix[1,1]
-    return confusion_matrix  
-
-def compare_detection_to_groundtruth(groundtruth_boxes, detection_boxes, iou_min=0.5, score_min=0):
     confusion_matrix = np.zeros((3,3))
-    
-    if (len(detection_boxes))>0:
-        detection_boxes = np.asarray(detection_boxes)
-        detection_boxes = detection_boxes[detection_boxes[:,2]>score_min]
-        detection_boxes = np.ndarray.tolist(detection_boxes)
-    else :
-        detection_boxes = []
-
     match = []
+    detection_boxes = []
+    for i in range(len(boxes)):
+        if probs[i] >= score_min:
+            detection_boxes.append(boxes[i])
 
     for idx in range(len(groundtruth_boxes)):
         groundtruth_boxe = [    groundtruth_boxes[idx]['x1'],
@@ -1771,8 +1821,8 @@ def compare_detection_to_groundtruth(groundtruth_boxes, detection_boxes, iou_min
             groundtruth_classe = 2
         # Each detection boxe
         for j in range(len(detection_boxes)):
-            detection_boxe = detection_boxes[j][0]
-            detection_classe = detection_boxes[j][1]
+            detection_boxe = detection_boxes[j]
+            detection_classe = 0
             curr_iou = iou(groundtruth_boxe,detection_boxe)
             if curr_iou > iou_min :
                 match.append((  groundtruth_classe,
@@ -1840,8 +1890,38 @@ def compare_detection_to_groundtruth(groundtruth_boxes, detection_boxes, iou_min
             if i == match[j][3]:
                 found_detection = True
         if found_detection == False:
-            confusion_matrix[detection_boxes[i][1],2] = confusion_matrix[detection_boxes[i][1],2] + 1
+            confusion_matrix[0,2] = confusion_matrix[0,2] + 1
     return confusion_matrix
+
+def compare_rpn_to_groundtruth(groundtruth_boxes, detection_boxes, num_boxes=300):
+    confusion_matrix = np.zeros((2,3))
+
+    for i in range(len(groundtruth_boxes)):
+        detected = False
+        groundtruth_boxe = [    groundtruth_boxes[i]['x1'],
+                                groundtruth_boxes[i]['y1'],
+                                groundtruth_boxes[i]['x2'],
+                                groundtruth_boxes[i]['y2']]
+        groundtruth_classe = groundtruth_boxes[i]['class'] 
+        for j in range(len(detection_boxes)):
+            curr_iou = iou(groundtruth_boxe,detection_boxes[j])
+            if curr_iou >= 0.5:
+                detected = True
+                break
+        if detected == True:
+            if groundtruth_classe == 'pig':
+                confusion_matrix[0,0] = confusion_matrix[0,0] + 1
+            if groundtruth_classe == 'others':
+                confusion_matrix[0,1] = confusion_matrix[0,1] + 1
+        else:
+            if groundtruth_classe == 'pig':
+                confusion_matrix[1,0] = confusion_matrix[1,0] + 1
+            if groundtruth_classe == 'others':
+                confusion_matrix[1,1] = confusion_matrix[1,1] + 1
+    
+    confusion_matrix[0,2] = num_boxes - confusion_matrix[0,0] - confusion_matrix[0,1] - confusion_matrix[1,0] - confusion_matrix[1,1]
+    return confusion_matrix  
+
 
 def get_detections_boxes(Y, C, class_mapping):
     bboxes = []
