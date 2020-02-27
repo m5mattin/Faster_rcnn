@@ -249,7 +249,7 @@ else :
 
         # Get bboxes by applying NMS 
         # R.shape = (300, 4)
-        R,probs = rpn_to_roi(Y1, Y2, C, K.image_dim_ordering(), max_boxes=300, overlap_thresh=0.7)
+        R,probs = rpn_to_roi(Y1, Y2, C, K.common.image_dim_ordering(), max_boxes=300, overlap_thresh=0.7)
         FPs[0,id_graph] = np.amax(probs)
 
         R[:, 2] -= R[:, 0]
