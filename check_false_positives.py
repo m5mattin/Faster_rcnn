@@ -152,7 +152,6 @@ else :
     from matplotlib import pyplot as plt
     import tensorflow as tf
     import pandas as pd
-    import keyboard
 
     from sklearn.metrics import average_precision_score
 
