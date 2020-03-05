@@ -244,17 +244,16 @@ model_all = Model([img_input, roi_input], rpn[:2] + classifier)
 # Because the google colab can only run the session several hours one time (then you need to connect again), 
 # we need to save the model and load the model to continue training
 if checkpoint_to_load:
+    # Load records
+    record_df_train = pd.read_csv("../record_train.csv")
+    record_df_test = pd.read_csv("../record_test.csv")
     print('Continue training based on previous trained model')
+    print('Already train %dK batches'% (len(record_df_train)))
+    # Load weights
     print('Loading weights from {}'.format(checkpoint_to_load))
     model_rpn.load_weights(checkpoint_to_load, by_name=True)
     model_classifier.load_weights(checkpoint_to_load, by_name=True)
     
-    # Load the records
-    record_df_train = pd.read_csv("../record_train.csv")
-    record_df_test = pd.read_csv("../record_test.csv")
-
-    print('Already train %dK batches'% (len(record_df_train)))
-
 else:
 # if not os.path.isfile(C.model_path):
     #If this is the begin of the training, load the pre-traind base network such as vgg-16
@@ -305,9 +304,7 @@ r_epochs = len(record_df_train)
 
 epoch_length = len(train_imgs)
 imagestest_length = len(test_imgs)
-num_epochs = 100 - r_epochs
-iter_num = 0
-
+num_epochs = 200 - r_epochs
 total_epochs += num_epochs
 
 losses_train = np.zeros((epoch_length, 8))
@@ -318,16 +315,16 @@ rpn_accuracy_for_epoch_train = []
 rpn_accuracy_rpn_monitor_test = []
 rpn_accuracy_for_epoch_test = []
 
-rpn_overlaping_train = np.zeros((epoch_length,3,num_epochs))
-rpn_overlaping_test = np.zeros((imagestest_length,3,num_epochs))
+rpn_overlaping_train = np.zeros((epoch_length,3,total_epochs))
+rpn_overlaping_test = np.zeros((imagestest_length,3,total_epochs))
 
 best_loss_train = np.Inf
 
 start_time = time.time()
 
 st_epoch = time.time()
-
-for epoch_num in range(num_epochs):
+iter_num = 0
+for epoch_num in range(r_epochs,num_epochs):
     print("time/epoch:{}".format(st_epoch-time.time()))
     st_epoch = time.time()
 
