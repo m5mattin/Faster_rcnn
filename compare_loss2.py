@@ -19,16 +19,16 @@ parser.add_argument('-MO','--MO', action='store_true')
 def get_rpn_recall(c):
     tp = c['rpn_00']
     fn = c['rpn_10']
-    return tp / (tp+fn)
+    return tp / (tp+fn + 1e-16)
 
 def get_class_f1(c):
     tp = c['class_00']
     fn = c['class_10']  + c['class_10']
     fp = c['class_01']  + c['class_02']
     tn = c['class_11']  + c['class_12'] + c['class_21'] + c['class_22']
-    recall = tp / (tp + fn)
-    precision = tp / (tp + fp)
-    f1 = 2*(precision * recall)/(precision + recall)
+    recall = tp / (tp + fn + 1e-16)
+    precision = tp / (tp + fp + 1e-16)
+    f1 = 2*(precision * recall)/(precision + recall+ + 1e-16)
     return recall, precision, f1
 
 
@@ -54,7 +54,7 @@ if show_HA:
 if show_HOEM: 
     nb_method  = nb_method + 1
 
-nb_method = int(nb_method / 2)
+nb_method = 4
 train_P = pd.read_csv("../models/P/record_train.csv")
 test_P = pd.read_csv("../models/P/record_test.csv")
 train_PaO = pd.read_csv("../models/PaO/record_train.csv")

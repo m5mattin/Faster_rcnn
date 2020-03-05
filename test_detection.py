@@ -95,14 +95,19 @@ parser.add_argument('-p','--only_pig', action='store_true',
 			help='show only pig')
 parser.add_argument('-r','--rpn', action='store_true',
 			help='show result rpn')
-
+parser.add_argument('-s','--save_output', action='store_true',
+			help='show result rpn')
+parser.add_argument('-iiou','--iiou', action='store_true',
+			help='show result rpn')
 
 args = parser.parse_args()
 
 base_path = os.getcwd()
 args = parser.parse_args()
-
+save_output = args.save_output
 device = args.device
+use_iiou = args.iiou
+
 if device:
     os.environ["CUDA_VISIBLE_DEVICES"]=device
 
@@ -250,7 +255,6 @@ for idx, img_name in enumerate(imgs_path):
     # Get bboxes by applying NMS 
     # R.shape = (300, 4)
     R,probs = rpn_to_roi(Y1, Y2, C, K.image_dim_ordering(), max_boxes=300, overlap_thresh=0.7)
-    print(probs)
     if show_rpn:
         img_rpn = img.copy()
         for i in range (R.shape[0]):
@@ -294,8 +298,6 @@ for idx, img_name in enumerate(imgs_path):
             ROIs = ROIs_padded
 
         [P_cls, P_regr] = model_classifier_only.predict([F, ROIs])
-        print(P_cls.shape)
-                
 
         # Calculate bboxes coordinates on resized image
         for ii in range(P_cls.shape[1]):
@@ -329,7 +331,10 @@ for idx, img_name in enumerate(imgs_path):
     for key in bboxes:
         if ((show_only_pig is False) or (show_only_pig is True and key == 'pig')):
             bbox = np.array(bboxes[key])
-            new_boxes, new_probs, valid  = non_max_suppression_fast(bbox, np.array(probs[key]), overlap_thresh=nms_threshold)
+            if use_iiou:
+                new_boxes, new_probs, valid  = non_max_suppression_fast_iiou(bbox, np.array(probs[key]), overlap_thresh=nms_threshold)
+            else:
+                new_boxes, new_probs, valid  = non_max_suppression_fast(bbox, np.array(probs[key]), overlap_thresh=nms_threshold)
             for jk in range(new_boxes.shape[0]):
                 (x1, y1, x2, y2) = new_boxes[jk,:]
 
@@ -350,20 +355,26 @@ for idx, img_name in enumerate(imgs_path):
                 cv2.rectangle(img, (textOrg[0] - 5,textOrg[1]+baseLine - 5), (textOrg[0]+retval[0] + 5, textOrg[1]-retval[1] - 5), (255, 255, 255), -1)
                 cv2.putText(img, textLabel, textOrg, cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 0), 1)
 
-    print('Elapsed time = {}'.format(time.time() - st))
-    print(all_dets)
+    if save_output:
+        print(idx)
+        output_path = "../output/" + img_name[len(images_folder)+1:]
+        cv2.imwrite(output_path,img)
 
-    cv2.imshow('image',img)
+        print('Elapsed time = {}'.format(time.time() - st))
 
-    if show_rpn:
-        cv2.imshow('rpn', img_rpn)
+    else:
 
-    while True:
-        k = cv2.waitKey(0)
-        if k == 27 or k == 113:         # wait for ESC or q key to exit
-            cv2.destroyAllWindows()
-            quit()
-        if k == 110:
-            break
-        elif k == ord('s'): # wait for 's' key to save
-            cv2.imwrite(img_name[len(images_folder)+1:],img)
+        cv2.imshow('image',img)
+
+        if show_rpn:
+            cv2.imshow('rpn', img_rpn)
+
+        while True:
+            k = cv2.waitKey(0)
+            if k == 27 or k == 113:         # wait for ESC or q key to exit
+                cv2.destroyAllWindows()
+                quit()
+            if k == 110:
+                break
+            elif k == ord('s'): # wait for 's' key to save
+                cv2.imwrite(img_name[len(images_folder)+1:],img)

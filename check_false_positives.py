@@ -110,6 +110,8 @@ if show:
     FPs=np.load(path_to_np)
     r_epochs = np.arange(0, FPs.shape[1])
 
+    plt.ylim(0,1.05)
+
     plt.plot(    r_epochs, 
                     FPs[0,:],
                     label='RPN',
@@ -257,5 +259,6 @@ else :
         ROIs = np.expand_dims(R, axis=0)
         [P_cls, P_regr] = model_classifier.predict([F, ROIs])
         FPs[1,id_graph] = np.amax(P_cls[0,:,0])
+        print(FPs[1,id_graph])
 
     np.save('../FPs.npy', FPs)

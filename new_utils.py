@@ -1125,7 +1125,6 @@ def non_max_suppression_fast(boxes, probs, overlap_thresh=0.9, max_boxes=300):
         pick.append(i)
 
         # find the intersection
-
         xx1_int = np.maximum(x1[i], x1[idxs[:last]])
         yy1_int = np.maximum(y1[i], y1[idxs[:last]])
         xx2_int = np.minimum(x2[i], x2[idxs[:last]])
@@ -1193,6 +1192,7 @@ def non_max_suppression_fast_iiou(boxes, probs, overlap_thresh=0.9, max_boxes=30
 
     # keep looping while some indexes still remain in the indexes
     # list
+    
     while len(idxs) > 0:
         # grab the last index in the indexes list and add the
         # index value to the list of picked indexes
@@ -1201,12 +1201,11 @@ def non_max_suppression_fast_iiou(boxes, probs, overlap_thresh=0.9, max_boxes=30
         pick.append(i)
 
         # find the intersection
-        xx1_min_area = np.min(x1[i], x1[idxs[:last]])
-        yy1_min_area = np.min(y1[i], y1[idxs[:last]])
-        xx2_min_area = np.max(x2[i], x2[idxs[:last]])
-        yy2_min_area= np.max(y2[i], y2[idxs[:last]])
+        xx1_min_area = np.minimum(x1[i], x1[idxs[:last]])
+        yy1_min_area = np.minimum(y1[i], y1[idxs[:last]])
+        xx2_min_area = np.maximum(x2[i], x2[idxs[:last]])
+        yy2_min_area= np.maximum(y2[i], y2[idxs[:last]])
         min_area = abs((xx2_min_area-xx1_min_area)*(yy2_min_area-yy1_min_area))
-
 
         xx1_int = np.maximum(x1[i], x1[idxs[:last]])
         yy1_int = np.maximum(y1[i], y1[idxs[:last]])
@@ -1224,8 +1223,8 @@ def non_max_suppression_fast_iiou(boxes, probs, overlap_thresh=0.9, max_boxes=30
         # compute the ratio of overlap
         iou = area_int/(area_union + 1e-6)
 
-        overlap = iou - ((min_area-area_union)/min_area)
-
+        overlap = iou - ((min_area-area_union)/(min_area+ 1e-6))
+        print(overlap_thresh,overlap)
         # delete all indexes from the index list that have
         idxs = np.delete(idxs, np.concatenate(([last],
             np.where(overlap > overlap_thresh)[0])))

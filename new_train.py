@@ -245,7 +245,7 @@ model_all = Model([img_input, roi_input], rpn[:2] + classifier)
 # we need to save the model and load the model to continue training
 if checkpoint_to_load:
     print('Continue training based on previous trained model')
-    print('Loading weights from {}'.format(C.model_path))
+    print('Loading weights from {}'.format(checkpoint_to_load))
     model_rpn.load_weights(checkpoint_to_load, by_name=True)
     model_classifier.load_weights(checkpoint_to_load, by_name=True)
     
@@ -293,6 +293,7 @@ Learning_rate = 1e-4
 # optimizer_classifier = Adam(lr=Learning_rate)
 optimizer = SGD(lr=Learning_rate)
 optimizer_classifier = SGD(lr=Learning_rate)
+
 model_rpn.compile(optimizer=optimizer, loss=[rpn_loss_cls(num_anchors), rpn_loss_regr(num_anchors)])
 model_classifier.compile(optimizer=optimizer_classifier, loss=[class_loss_cls, class_loss_regr(len(class_mapping)-1)], metrics=["accuracy"])
 
@@ -577,7 +578,7 @@ for epoch_num in range(num_epochs):
                 for num_image in range (len(test_imgs)):  
                     print("epoch {}, test image {}/{} processed".format(epoch_num, num_image+1,len(test_imgs)))
 
-                    X_test, Y_test, img_data_test, debug_img_test, debug_num_pos_test, hard_anchors_others   = next(data_gen_test)
+                    X_test, Y_test, img_data_test, debug_img_test, debug_num_pos_test, hard_anchors_others = next(data_gen_test)
 
                     loss_rpn_test = model_rpn.test_on_batch(X_test, Y_test)
 
