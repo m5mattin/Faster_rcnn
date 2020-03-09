@@ -32,11 +32,17 @@ def get_rpn_values(c):
 
     return recall_per_nms, precision_per_nms, recall_per_boxes, precision_per_boxes
 
-def get_detect_values(c):
+def get_detect_values(c,iiou=False):
     
-    detect_nms_range = [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]
-    detect_score_range = [0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
-    
+
+    if iiou == True:
+        detect_nms_range = [-0.9,-0.8,-0.7,-0.6,-0.5,-0.4,-0.3,-0.2,-0.1,0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]
+        detect_score_range = [0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
+    else:
+        detect_nms_range = [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]
+        detect_score_range = [0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
+
+
     recall_per_nms = []
     precision_per_nms = []
     recall_per_score = []
@@ -60,7 +66,10 @@ def get_detect_values(c):
         f1_per_nms.append(f1)
 
     for i in range(len(detect_score_range)):
-        j = (3*len(detect_score_range)) + i
+        if iiou==False:
+            j = (3*len(detect_score_range)) + i
+        else:
+            j = (9*len(detect_score_range)) + i
         
         TP = c[0,0,j]
         FN = c[1,0,j] + c[2,0,j]
@@ -93,18 +102,21 @@ show_3C = args.PaCO
 show_HA = args.HA
 show_HOEM = args.HOEM
 
-rpn_nms_range = [0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95] #10
-max_boxes_range = [50,100,150,200,250,300,350,400,450,500,550,600] #12
+rpn_nms_range = [0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
+max_boxes_range = [50,100,150,200,250,300,350,400,450,500,550,600]
 
-detect_nms_range = [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9] #9
-detect_score_range = [0.5,0.5,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
+detect_nms_range = [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]
+detect_score_range = [0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
+detect_nms_iiou_range = [-0.9,-0.8,-0.7,-0.6,-0.5,-0.4,-0.3,-0.2,-0.1,0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]
 
 
-fig, axs = plt.subplots(1, 4)
+
+fig, axs = plt.subplots(1, 5)
 axs[0].set_title('Rpn : NMS',color='black')
 axs[1].set_title('Rpn : Max boxes',color='black')
-axs[2].set_title('Detection : NMS',color='black')
+axs[2].set_title('Detection : NMS ',color='black')
 axs[3].set_title('Detection : Score',color='black')
+axs[4].set_title('Detection : NMS IIOU ',color='black')
 
 if show_P:
     rpn_P= np.load('../models/P/rpn.npy')
@@ -139,9 +151,12 @@ if show_P:
 if show_2C:
     rpn_2C= np.load('../models/PaO/rpn.npy')
     detect_2C = np.load('../models/PaO/detect.npy')
-    rpn_recall_per_nms, rpn_precision_per_nms, rpn_recall_per_boxes, rpn_precision_per_boxes = get_rpn_values(rpn_2C)
-    d_recall_per_nms, d_precision_per_nms, d_f1_per_nms, d_recall_per_score, d_precision_per_score, d_f1_per_score = get_detect_values(detect_2C)
+    detect_2C_iiou = np.load('../models/PaO/detect_iiou.npy')
 
+    rpn_recall_per_nms, rpn_precision_per_nms, rpn_recall_per_boxes, rpn_precision_per_boxes = get_rpn_values(rpn_2C)
+    d_recall_per_nms, d_precision_per_nms, d_f1_per_nms, d_recall_per_score, d_precision_per_score, d_f1_per_score = get_detect_values(detect_2C,iiou=False)
+    d_recall_per_nms_iiou, d_precision_per_nms_iiou, d_f1_per_nms_iiou, d_recall_per_score_iiou, d_precision_per_score_iiou, d_f1_per_score_iiou = get_detect_values(detect_2C_iiou,iiou=True)
+    
     axs[0].plot(    rpn_nms_range,
                     rpn_recall_per_nms,
                     label='2C recall',
@@ -160,37 +175,43 @@ if show_2C:
                     label='2C precision',
                     color=colors['red'])
 
-    # axs[2].plot(    detect_nms_range,
-    #                 d_recall_per_nms,
-    #                 label='2C recall',
-    #                 color=colors['darkred'])
-    # axs[2].plot(    detect_nms_range,
-    #                 d_precision_per_nms,
-    #                 label='2C precision',
-    #                 color=colors['red'])
+
     axs[2].plot(    detect_nms_range,
-                    d_f1_per_nms,
-                    label='2C f1 score',
+                    d_recall_per_nms,
+                    label='2C recall',
                     color=colors['darkred'])
-    
-    # axs[3].plot(    detect_score_range,
-    #                 d_recall_per_score,
-    #                 label='2C recall',
-    #                 color=colors['darkred'])
-    # axs[3].plot(    detect_score_range,
-    #                 d_precision_per_score,
-    #                 label='2C precision',
-    #                 color=colors['red'])
+    axs[2].plot(    detect_nms_range,
+                    d_precision_per_nms,
+                    label='2C precision',
+                    color=colors['red'])
+
     axs[3].plot(    detect_score_range,
-                    d_f1_per_score,
-                    label='2C f1 score',
+                    d_recall_per_score,
+                    label='2C recall',
                     color=colors['darkred'])
+    axs[3].plot(    detect_score_range,
+                    d_precision_per_score,
+                    label='2C precision',
+                    color=colors['red'])
+
+    axs[4].plot(    detect_nms_iiou_range,
+                    d_recall_per_nms_iiou,
+                    label='2C recall',
+                    color=colors['darkred'])
+    axs[4].plot(    detect_nms_iiou_range,
+                    d_precision_per_nms_iiou,
+                    label='2C precision',
+                    color=colors['red'])
+
+
+
 if show_3C:
     rpn_3C= np.load('../models/PaCO/rpn.npy')
     detect_3C = np.load('../models/PaCO/detect.npy')
     rpn_recall_per_nms, rpn_precision_per_nms, rpn_recall_per_boxes, rpn_precision_per_boxes = get_rpn_values(rpn_3C)
     d_recall_per_nms, d_precision_per_nms, d_f1_per_nms, d_recall_per_score, d_precision_per_score, d_f1_per_score = get_detect_values(detect_3C)
-
+    d_recall_per_nms_iiou, d_precision_per_nms_iiou, d_f1_per_nms_iiou, d_recall_per_score_iiou, d_precision_per_score_iiou, d_f1_per_score_iiou = get_detect_values(detect_2C_iiou)
+    
     axs[0].plot(    rpn_nms_range,
                     rpn_recall_per_nms,
                     label='3C recall',
@@ -207,6 +228,7 @@ if show_3C:
                     rpn_precision_per_boxes,
                     label='3C precision',
                     color=colors['royalblue'])
+
     axs[2].plot(    detect_nms_range,
                     d_f1_per_nms,
                     label='3C f1 score',
@@ -215,6 +237,11 @@ if show_3C:
                     d_f1_per_score,
                     label='3C f1 score',
                     color=colors['darkblue'])
+    axs[4].plot(    detect_nms_iiou_range,
+                    d_f1_per_score_iiou,
+                    label='3C f1 score',
+                    color=colors['darkblue'])
+
 if show_HOEM:
 
     rpn_HOEM= np.load('../models/HOEM/rpn.npy')
@@ -321,5 +348,6 @@ axs[0].set_ylim(0,1.05)
 axs[1].set_ylim(0,1.05)
 axs[2].set_ylim(0,1.05)
 axs[3].set_ylim(0,1.05)
+axs[4].set_ylim(0,1.05)
 
 plt.show()

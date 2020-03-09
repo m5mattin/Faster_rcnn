@@ -224,7 +224,7 @@ detect_score_range = [0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]
 detect_nms_iiou_range = [-0.9,-0.8,-0.7,-0.6,-0.5,-0.4,-0.3,-0.2,-0.1,0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]
 
 detect_confusion_matrix = np.zeros((3,3,len(detect_nms_range)*len(detect_score_range)))
-detect_confusion_matrix__iiou = np.zeros((3,3,len(detect_nms_range)*len(detect_score_range)))
+detect_confusion_matrix_iiou = np.zeros((3,3,len(detect_nms_iiou_range)*len(detect_score_range)))
 
 # Get data
 test_imgs, classes_count_test, _ = get_data(test_path,images_path)
@@ -283,25 +283,25 @@ while True:
                                                                 iou_min=0.5, 
                                                                 score_min=detect_score_range[j])
             detect_confusion_matrix[:,:,i*len(detect_score_range)+j] = detect_confusion_matrix[:,:,i*len(detect_score_range)+j] + tmp_confusion
-            # if i == 3 and j == 0:
-            #     if tmp_confusion[0,1] > 0 or tmp_confusion[0,2] > 0:
-            #         print("False positive on image : ",img_data["filepath"])
-            #     if tmp_confusion[1,0] > 0 or tmp_confusion[2,0] > 0:
-            #         print("False negative on image : ",img_data["filepath"])
+            if i == 3 and j == 0:
+                if tmp_confusion[0,1] > 0 or tmp_confusion[0,2] > 0:
+                    print("False positive on image : ",img_data["filepath"])
+                if tmp_confusion[1,0] > 0 or tmp_confusion[2,0] > 0:
+                    print("False negative on image : ",img_data["filepath"])
 
-    # for i in range (len(detect_nms_iiou_range)):
-    #     for j in range (len(detect_score_range)):
-    #         bboxes_nms, probs_nms, valid = non_max_suppression_fast_iiou(       bboxes,
-    #                                                                             probs,
-    #                                                                             overlap_thresh=detect_nms_iiou_range[i],
-    #                                                                             max_boxes=600)
+    for i in range (len(detect_nms_iiou_range)):
+        for j in range (len(detect_score_range)):
+            bboxes_nms, probs_nms, valid = non_max_suppression_fast_iiou(       bboxes,
+                                                                                probs,
+                                                                                overlap_thresh=detect_nms_iiou_range[i],
+                                                                                max_boxes=600)
                     
-    #         tmp_confusion = compare_detection_to_groundtruth(   img_data['bboxes'],
-    #                                                             bboxes_nms,
-    #                                                             probs_nms,
-    #                                                             iou_min=0.5, 
-    #                                                             score_min=detect_score_range[j])
-    #         detect_confusion_matrix_iiou[:,:,i*len(detect_score_range)+j] = detect_confusion_matrix_iiou[:,:,i*len(detect_score_range)+j] + tmp_confusion
+            tmp_confusion = compare_detection_to_groundtruth(   img_data['bboxes'],
+                                                                bboxes_nms,
+                                                                probs_nms,
+                                                                iou_min=0.5, 
+                                                                score_min=detect_score_range[j])
+            detect_confusion_matrix_iiou[:,:,i*len(detect_score_range)+j] = detect_confusion_matrix_iiou[:,:,i*len(detect_score_range)+j] + tmp_confusion
 
 
 
@@ -310,5 +310,5 @@ while True:
     if iter_num == epoch_length:
         np.save('../rpn.npy', rpn_confusion_matrix)
         np.save('../detect.npy', detect_confusion_matrix)
-        np.save('../detect_iiou.npy', detect_confusion_matrix__iiou)
+        np.save('../detect_iiou.npy', detect_confusion_matrix_iiou)
         quit()

@@ -304,8 +304,8 @@ r_epochs = len(record_df_train)
 
 epoch_length = len(train_imgs)
 imagestest_length = len(test_imgs)
-num_epochs = 200 - r_epochs
-total_epochs += num_epochs
+
+total_epochs = 200
 
 losses_train = np.zeros((epoch_length, 8))
 losses_test = np.zeros((imagestest_length, 8))
@@ -324,7 +324,10 @@ start_time = time.time()
 
 st_epoch = time.time()
 iter_num = 0
-for epoch_num in range(r_epochs,num_epochs):
+
+
+for epoch_num in range(r_epochs,total_epochs):
+
     print("time/epoch:{}".format(st_epoch-time.time()))
     st_epoch = time.time()
 

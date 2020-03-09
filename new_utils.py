@@ -1224,7 +1224,6 @@ def non_max_suppression_fast_iiou(boxes, probs, overlap_thresh=0.9, max_boxes=30
         iou = area_int/(area_union + 1e-6)
 
         overlap = iou - ((min_area-area_union)/(min_area+ 1e-6))
-        print(overlap_thresh,overlap)
         # delete all indexes from the index list that have
         idxs = np.delete(idxs, np.concatenate(([last],
             np.where(overlap > overlap_thresh)[0])))
